@@ -3,7 +3,7 @@ import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 @Entity('ticket') //This maps the notes entity to the 'notes' table in your DB
 
 export class Ticket {
-    @PrimaryGeneratedColumn('uuid')
+    @PrimaryGeneratedColumn()
     id: number;
   
     @Column({ name: 'name', length: 60, nullable: false })
