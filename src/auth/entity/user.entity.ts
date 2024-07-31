@@ -25,7 +25,7 @@ export class User {
 
     toJSON() {
         // Personaliza la conversión a JSON
-        const { password, ...userData } = this;
+        const {  ...userData } = this;
         return userData;
     }
     

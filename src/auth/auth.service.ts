@@ -63,16 +63,14 @@ export class AuthService {
             throw new UnauthorizedException('Credenciales de acceso invalidas - password');
         }
 
-        const { password: _, ...rest  } = user as any;
+        const { password: _, ...rest  } = user.toJSON();
         
         return {
             user: rest,
             token: this.getJwtToken({ id: user.id })
         }
 
-        // return 'Credenciales validas';
-        
-        //console.log({ loginDto })
+
     }
 
 
@@ -81,23 +79,34 @@ export class AuthService {
         return this.userRepository.find()
     }
 
-    findOne(id:number) {
-        return 'This action returns a #${id} auth';
-    }
+    async findUserById ( id: number ){
+        const user = await this.userRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new UnauthorizedException(`Usuario con ID ${id} no encontrado`);
+        }
 
-    update(id: number, updateAuthDto:UpdateUserDto) {
-        return 'This action update a #${id} auth';
+        const { password, ...restWithoutPassword } = user;
+        // console.log(restWithoutPassword)
+        return restWithoutPassword;
     }
+    
+   
 
-    remove(id: number) {
-        return 'This action remove a #${id} auth'
-    }
 
-    getJwtToken( payload: jwtPayload ):string {
+    findOne(id: number) {
+        return `This action returns a #${id} auth`;
+      }
+
+    // update(id: number, updateAuthDto:UpdateUserDto) {
+    //     return 'This action update a #${id} auth';
+    // }
+
+    // remove(id: number) {
+    //     return 'This action remove a #${id} auth'
+    // }
+    
+    getJwtToken( payload: jwtPayload ) {
         const token = this.jwtService.sign(payload);
         return token;
-    }
-
-
-
+      }
 }
