@@ -16,7 +16,7 @@ export class TicketController {
 
     //Se agrega un ticket
     @Post()
-    createTicket(@Body() createTicketDto: CreateTicketDto ): Promise<Ticket> {
+    async createTicket(@Body() createTicketDto: CreateTicketDto ){
         return this.ticketService.addTicket(createTicketDto)
     }
 

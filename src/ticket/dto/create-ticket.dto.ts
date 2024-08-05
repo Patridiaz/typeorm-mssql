@@ -1,16 +1,37 @@
-import { IsInt, IsNotEmpty } from "class-validator";
-
+import { Type } from 'class-transformer';
+import { IsNotEmpty, IsString, IsDate } from 'class-validator';
 
 export class CreateTicketDto {
-    
-    @IsNotEmpty({ message: 'El nombre no puede ir vacio' })
-    name: string;
-  
-    @IsNotEmpty({ message: 'El mail no puede ir vacio' })
-    email: string;
-  
-    @IsNotEmpty({ message: 'El nombre no puede ir vacio' })
-    @IsInt({ message: 'Anexo debe ser numerico' })
-    anexo: number;
+  @IsNotEmpty()
+  @IsString()
+  nombre: string;
 
-  }
+  @IsNotEmpty()
+  @IsString()
+  establecimiento: string;
+
+  @IsNotEmpty()
+  @IsString()
+  email: string;
+
+  @IsNotEmpty()
+  @IsString()
+  anexo: string;
+
+  @IsNotEmpty()
+  @IsString()
+  incidencia: string;
+
+  @IsNotEmpty()
+  @IsString()
+  estado: string;
+
+
+  @IsString()
+  tecnico: string;
+
+  @IsNotEmpty()
+  @Type(() => Date)
+  @IsDate()
+  fecha: Date;
+}

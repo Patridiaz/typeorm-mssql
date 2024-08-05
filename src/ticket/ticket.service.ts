@@ -10,11 +10,17 @@ export class TicketService {
 
     constructor(
         @InjectRepository(Ticket)
-        private ticketRepository: Repository<Ticket>,
+        private readonly ticketRepository: Repository<Ticket>,
     ){}
 
     // La Logica del CRUD para el tickets comienza aqui
 
+   //Agregamos un ticket a la base de datos
+   async addTicket(createTicketDto: CreateTicketDto): Promise<Ticket>{
+    const ticket = this.ticketRepository.create(createTicketDto);
+    await this.ticketRepository.save(ticket);
+    return ticket;
+    } 
 
     // Obtenemos (FETCH)  todas los tickets de la base de datos
     async fetchTickets(): Promise<Ticket[]> {
@@ -30,17 +36,7 @@ export class TicketService {
         return found;
     }
 
-    //Agregamos un ticket a la base de datos
-    async addTicket(createTicketDto: CreateTicketDto): Promise<Ticket>{
-        const { name, email, anexo } = createTicketDto;
-        const ticket = this.ticketRepository.create({
-          name,
-          email,
-          anexo
-        })
-        await this.ticketRepository.save(ticket);
-        return ticket;
-    } 
+ 
 
 
     //Eliminar ticket de la base de datos por ID

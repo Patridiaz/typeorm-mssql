@@ -7,6 +7,8 @@ import { User } from './auth/entity/user.entity';
 import { AuthController } from './auth/auth.controller';
 import { AuthService } from './auth/auth.service';
 import { ConfigModule } from '@nestjs/config';
+import { EstablecimientoModule } from './colegio/colegio.module';
+import { Establecimiento } from './colegio/entity/colegio.entity';
 
 @Module({
   imports: [
@@ -25,11 +27,12 @@ import { ConfigModule } from '@nestjs/config';
         trustServerCertificate: true,
       },
       synchronize: true, //use this with development environment
-      entities: [Ticket,User],
+      entities: [Ticket,User,Establecimiento],
     }),
     TypeOrmModule.forFeature([User]),
     TicketModule,
     AuthModule,
+    EstablecimientoModule,
   ],
   controllers:[AuthController],
   providers:[AuthService]

@@ -1,16 +1,29 @@
-import { IsInt, IsNotEmpty } from "class-validator";
+import { IsDate, IsInt, IsNotEmpty, IsString } from "class-validator";
 
 
 export class UpdateTicketDto {
     
-    @IsNotEmpty({ message: 'El nombre no puede ir vacio' })
-    name: string;
-  
-    @IsNotEmpty({ message: 'El nombre no puede ir vacio' })
-    email: string;
-  
-    @IsNotEmpty({ message: 'El nombre no puede ir vacio' })
-    @IsInt({ message: 'Anexo debe ser numerico' })
-    anexo: number;
+  @IsNotEmpty()
+  @IsString()
+  nombre: string;
 
+  @IsNotEmpty()
+  @IsString()
+  establecimiento: string;
+
+  @IsNotEmpty()
+  @IsString()
+  incidencia: string;
+
+  @IsNotEmpty()
+  @IsString()
+  estado: string;
+
+  @IsNotEmpty()
+  @IsString()
+  tecnico: string;
+
+  @IsNotEmpty()
+  @IsDate()
+  fecha: Date;
   }
