@@ -69,8 +69,6 @@ export class AuthService {
             user: rest,
             token: this.getJwtToken({ id: user.id })
         }
-
-
     }
 
 

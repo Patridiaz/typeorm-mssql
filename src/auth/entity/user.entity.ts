@@ -13,9 +13,9 @@ export class User {
     @Column({ name: 'email', length: 160, nullable: false, unique:true })
     email: string;
 
-
     @Column({ name: 'password', type: 'nvarchar', nullable: false })
     password: string;
+
 
     @Column({ name:'isActive' ,type: 'bit', nullable: false, default:true })
     isActive: boolean;
