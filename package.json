@@ -32,6 +32,7 @@
     "mssql": "^10.0.4",
     "reflect-metadata": "^0.2.0",
     "rxjs": "^7.8.1",
+    "tedious": "^18.3.0",
     "typeorm": "^0.3.20"
   },
   "devDependencies": {
