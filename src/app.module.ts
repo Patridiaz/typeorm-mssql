@@ -17,17 +17,17 @@ import { Establecimiento } from './colegio/entity/colegio.entity';
     
     TypeOrmModule.forRoot({
       type: 'mssql',
-      host: '10.10.59.14',
-      port: 1432,
-      username: 'sa',
-      password: 'root',
-      database: 'ticket-service',
+      host: process.env.DB_HOST,
+      port: parseInt(process.env.DB_PORT, 10),
+      username: process.env.DB_USER,
+      password: process.env.DB_PASS,
+      database: process.env.DB_NAME,
       options: {
-        encrypt: false, // MSSQL-specific option
+        encrypt: false,
         trustServerCertificate: true,
       },
-      synchronize: true, //use this with development environment
-      entities: [Ticket,User,Establecimiento],
+      synchronize: true,
+      entities: [Ticket, User, Establecimiento],
     }),
     TypeOrmModule.forFeature([User]),
     TicketModule,
