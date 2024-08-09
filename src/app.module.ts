@@ -37,4 +37,6 @@ import { Establecimiento } from './colegio/entity/colegio.entity';
   controllers:[AuthController],
   providers:[AuthService]
 })
-export class AppModule {}
+export class AppModule {
+  
+}
