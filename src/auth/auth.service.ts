@@ -1,25 +1,29 @@
-import { BadRequestException, Injectable, InternalServerErrorException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from './entity/user.entity';
 import { Repository } from 'typeorm';
 import { CreateUserDto } from './dto/create-user.dto';
-import { UpdateUserDto } from './dto/update-user.dto';
 import * as bcryptjs from 'bcryptjs'
 import { plainToInstance } from 'class-transformer';
 import { LoginDto } from './dto/login.dto';
 import { JwtService } from '@nestjs/jwt';
 import { jwtPayload } from './interfaces/jwt-payload';
+import { RecoveryToken } from './entity/recovery-token.entity';
+import { MailService } from './mail.service';
 
 @Injectable()
 export class AuthService {
+
+    private readonly BASE_URL = 'http://localhost:4200';
 
     constructor(
 
         @InjectRepository(User)
         private userRepository: Repository<User>,
-        private jwtService: JwtService
-
-
+        private jwtService: JwtService,
+        @InjectRepository(RecoveryToken)
+        private recoveryTokenRepository: Repository<RecoveryToken>,
+        private mailService: MailService
 
     ){}
     // Logica de crear usuario comienza aqui
@@ -107,4 +111,50 @@ export class AuthService {
         const token = this.jwtService.sign(payload);
         return token;
       }
+
+// Nueva funcionalidad para recuperación de contraseña
+
+async requestPasswordReset(email: string): Promise<void> {
+    const user = await this.userRepository.findOne({ where: { email } });
+    if (!user) {
+        throw new NotFoundException('Usuario no encontrado');
+    }
+
+    // Generar un token de recuperación
+    const resetToken = bcryptjs.hashSync(user.email + Date.now().toString(), 10); // Simple hash token
+    const resetTokenExpiry = new Date();
+    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // Expira en 1 hora
+
+    // Guardar el token en la base de datos
+    await this.recoveryTokenRepository.save({
+        userId: user.id,
+        token: resetToken,
+        expiresAt: resetTokenExpiry
+    });
+
+    // Enviar correo electrónico
+    const resetUrl = `${this.BASE_URL}/reset-password?token=${resetToken}`;
+    await this.mailService.sendPasswordResetEmail(user.email, resetUrl);
+}
+
+async resetPassword(token: string, newPassword: string): Promise<void> {
+    const recoveryToken = await this.recoveryTokenRepository.findOne({ where: { token } });
+    if (!recoveryToken || recoveryToken.expiresAt < new Date()) {
+        throw new BadRequestException('Token de recuperación inválido o expirado');
+    }
+
+    const user = await this.userRepository.findOne({ where: { id: recoveryToken.user.id } });
+    if (!user) {
+        throw new NotFoundException('Usuario no encontrado');
+    }
+
+    const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+    user.password = hashedPassword;
+    await this.userRepository.save(user);
+
+    // Eliminar el token de recuperación usado
+    await this.recoveryTokenRepository.delete({ token });
+}
+      
+   
 }

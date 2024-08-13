@@ -5,21 +5,22 @@ import { User } from './entity/user.entity';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule } from '@nestjs/config';
+import { RecoveryToken } from './entity/recovery-token.entity';
+import { MailService } from './mail.service';
+
 @Module({
-  imports:[
-    
+  imports: [
     ConfigModule.forRoot(),
-
-    TypeOrmModule.forFeature([User]),
-
+    TypeOrmModule.forFeature([User, RecoveryToken]),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SEED,
       signOptions: { expiresIn: '6h' },
     }),
+    
     AuthModule
   ],
-  providers: [AuthService],
-  controllers: [AuthController]
+  providers: [AuthService, MailService],
+  controllers: [AuthController],
 })
 export class AuthModule {}

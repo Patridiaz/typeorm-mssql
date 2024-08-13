@@ -1,3 +1,4 @@
+import { HandlebarsAdapter } from '@nestjs-modules/mailer/dist/adapters/handlebars.adapter';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TicketModule } from './ticket/ticket.module';
@@ -9,6 +10,10 @@ import { AuthService } from './auth/auth.service';
 import { ConfigModule } from '@nestjs/config';
 import { EstablecimientoModule } from './colegio/colegio.module';
 import { Establecimiento } from './colegio/entity/colegio.entity';
+import { TicketTypeModule } from './ticket-type/ticket-type.module';
+import { TipoTicket } from './ticket-type/entity/tipo-ticket.entity';
+import { RecoveryToken } from './auth/entity/recovery-token.entity';
+import { MailService } from './auth/mail.service';
 
 @Module({
   imports: [
@@ -27,15 +32,20 @@ import { Establecimiento } from './colegio/entity/colegio.entity';
         trustServerCertificate: true,
       },
       synchronize: true,
-      entities: [Ticket, User, Establecimiento],
+      entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken],
     }),
-    TypeOrmModule.forFeature([User]),
+
+   
+
+    TypeOrmModule.forFeature([User,RecoveryToken]),
     TicketModule,
     AuthModule,
     EstablecimientoModule,
+    TicketTypeModule,
+    
   ],
   controllers:[AuthController],
-  providers:[AuthService]
+  providers:[AuthService,MailService ]
 })
 export class AppModule {
   

@@ -1,5 +1,6 @@
 import { Exclude } from "class-transformer";
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { RecoveryToken } from "./recovery-token.entity";
 
 @Entity('user') //This maps the notes entity to the 'notes' table in your DB
 
@@ -28,5 +29,8 @@ export class User {
         const {  ...userData } = this;
         return userData;
     }
+    
+    @OneToMany(() => RecoveryToken, recoveryToken => recoveryToken.user)
+    recoveryTokens: RecoveryToken[]; // Define la propiedad para la relación
     
 }

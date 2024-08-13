@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Request, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Param, Post, Query, Request, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entity/user.entity';
@@ -44,6 +44,23 @@ export class AuthController {
       user,
       token
     }
-}
+
+  }
+
+  @Post('request-password-reset')
+    async requestPasswordReset(@Body('email') email: string): Promise<void> {
+        await this.authService.requestPasswordReset(email);
+    }
+
+    @Post('reset-password')
+    async resetPassword(
+        @Query('token') token: string,
+        @Body('newPassword') newPassword: string
+    ): Promise<void> {
+        await this.authService.resetPassword(token, newPassword);
+    }
+
+
+
 }
 

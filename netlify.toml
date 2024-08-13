@@ -1,0 +1,3 @@
+[build]
+  publish = "dist"  # Ajusta esto según tu carpeta de salida de construcción
+  command = "npm run build"  # Comando para construir tu aplicación
