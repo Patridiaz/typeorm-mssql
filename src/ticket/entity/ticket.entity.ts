@@ -1,4 +1,5 @@
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn } from 'typeorm';
+import { User } from 'src/auth/entity/user.entity';
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne } from 'typeorm';
 
 @Entity('ticket') //This maps the notes entity to the 'ticket' table in your DB
 
@@ -27,7 +28,10 @@ export class Ticket {
     @CreateDateColumn({ type: 'date', nullable: false })
     fecha: Date;
 
-    @Column({ type: 'nvarchar', nullable: false })
-    tecnico: string;
+    @ManyToOne(() => User, user => user.createdTickets)
+    createdBy: User;
+  
+    @ManyToOne(() => User, user => user.assignedTickets, { nullable: true })
+    assignedTo: User;
     
   }

@@ -17,10 +17,11 @@ import { MailService } from './mail.service';
       secret: process.env.JWT_SEED,
       signOptions: { expiresIn: '6h' },
     }),
-    
     AuthModule
+  
   ],
   providers: [AuthService, MailService],
   controllers: [AuthController],
+  exports: [AuthService, TypeOrmModule], // Exporta AuthService para que otros módulos puedan usarlo
 })
 export class AuthModule {}

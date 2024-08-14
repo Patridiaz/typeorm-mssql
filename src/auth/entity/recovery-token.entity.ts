@@ -1,17 +1,21 @@
-import { Entity, PrimaryGeneratedColumn, Column, ManyToOne } from 'typeorm';
+import { Entity, Column, ManyToOne, JoinColumn, PrimaryGeneratedColumn } from 'typeorm';
 import { User } from './user.entity';
 
-@Entity('recovery_token')
+@Entity()
 export class RecoveryToken {
   @PrimaryGeneratedColumn()
-  id: number;
+    id: number; // Esta será tu clave primaria
+    
+    @Column()
+    token: string;
 
-  @Column({ name: 'token', type: 'nvarchar', unique: true, nullable: false })
-  token: string;
+    @Column()
+    expiresAt: Date;
 
-  @Column({ name: 'expiresAt', type: 'datetime', nullable: false })
-  expiresAt: Date;
+    @Column()
+    userId: number; // Esta columna es necesaria
 
-  @ManyToOne(() => User, user => user.recoveryTokens)
-  user: User;
+    @ManyToOne(() => User, user => user.recoveryTokens)
+    @JoinColumn({ name: 'userId' })
+    user: User; // Esta propiedad es opcional si tienes una relación bidireccional
 }

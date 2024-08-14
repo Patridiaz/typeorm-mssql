@@ -16,12 +16,17 @@ export class MailService {
     });
   }
 
-  async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
+ async sendPasswordResetEmail(to: string, resetUrl: string): Promise<void> {
     await this.transporter.sendMail({
       from: 'no-reply@tudominio.com',
       to,
       subject: 'Solicitud de Restablecimiento de Contraseña',
-      text: `Haz clic en el siguiente enlace para restablecer tu contraseña: ${resetUrl}`
+      html: `
+        <h1>Restablecimiento de Contraseña</h1>
+        <p>Haz clic en el siguiente enlace para restablecer tu contraseña:</p>
+        <a href="${resetUrl}">Restablecer Contraseña</a>
+        <p>Este enlace expirará en 1 hora.</p>
+      `
     });
   }
 }

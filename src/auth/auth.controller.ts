@@ -54,11 +54,26 @@ export class AuthController {
 
     @Post('reset-password')
     async resetPassword(
-        @Query('token') token: string,
-        @Body('newPassword') newPassword: string
-    ): Promise<void> {
-        await this.authService.resetPassword(token, newPassword);
-    }
+        @Body('token') token: string, 
+        @Body('newPassword') 
+        newPassword: string) {
+    return this.authService.resetPassword(token, newPassword);
+  }
+
+    // @Post('reset-password')
+    // async resetPassword(
+    //     @Body('token') token: string,
+    //     @Body('newPassword') newPassword: string
+    // ): Promise<void> {
+    //     console.log('Received token backend:', token);
+    //     console.log('Received newPassword backend:', newPassword);
+    //     if (!token || !newPassword) {
+    //         throw new BadRequestException('Token y nueva contraseña son requeridos');
+    //     }
+    
+    //     await this.authService.resetPassword(token, newPassword);
+    // }
+    
 
 
 

@@ -1,5 +1,6 @@
 import { Type } from 'class-transformer';
-import { IsNotEmpty, IsString, IsDate } from 'class-validator';
+import { IsNotEmpty, IsString, IsDate, IsOptional, IsNumber } from 'class-validator';
+import { CreateUserDto } from 'src/auth/dto/create-user.dto';
 
 export class CreateTicketDto {
   @IsNotEmpty()
@@ -27,11 +28,21 @@ export class CreateTicketDto {
   estado: string;
 
 
-  @IsString()
-  tecnico: string;
+  @IsOptional()
+  @IsNumber({}, { each: true })
+  tecnico?: number;
 
   @IsNotEmpty()
   @Type(() => Date)
   @IsDate()
   fecha: Date;
+
+  assignedTo?: UserDto;  // Asegúrate de incluir esta propiedad
+
+  // Puedes incluir el UserDto si lo usas
+}
+
+export class UserDto {
+  id: number;
+  name: string;
 }

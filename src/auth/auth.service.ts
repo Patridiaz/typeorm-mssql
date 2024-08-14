@@ -10,11 +10,14 @@ import { JwtService } from '@nestjs/jwt';
 import { jwtPayload } from './interfaces/jwt-payload';
 import { RecoveryToken } from './entity/recovery-token.entity';
 import { MailService } from './mail.service';
+import { config } from 'dotenv';
+
+config(); // Cargar variables de entorno
 
 @Injectable()
 export class AuthService {
 
-    private readonly BASE_URL = 'http://localhost:4200';
+    private readonly BaseUrl: string;
 
     constructor(
 
@@ -25,7 +28,9 @@ export class AuthService {
         private recoveryTokenRepository: Repository<RecoveryToken>,
         private mailService: MailService
 
-    ){}
+    ){
+        this.BaseUrl = process.env.BASE_URL ;
+    }
     // Logica de crear usuario comienza aqui
 
     async createUser(createUserDto: CreateUserDto): Promise<User> {
@@ -67,10 +72,10 @@ export class AuthService {
             throw new UnauthorizedException('Credenciales de acceso invalidas - password');
         }
 
-        const { password: _, ...rest  } = user.toJSON();
+        const { password: _, ...userWithoutPassword } = user;
         
         return {
-            user: rest,
+            user: userWithoutPassword,
             token: this.getJwtToken({ id: user.id })
         }
     }
@@ -113,7 +118,6 @@ export class AuthService {
       }
 
 // Nueva funcionalidad para recuperación de contraseña
-
 async requestPasswordReset(email: string): Promise<void> {
     const user = await this.userRepository.findOne({ where: { email } });
     if (!user) {
@@ -133,28 +137,49 @@ async requestPasswordReset(email: string): Promise<void> {
     });
 
     // Enviar correo electrónico
-    const resetUrl = `${this.BASE_URL}/reset-password?token=${resetToken}`;
+    const resetUrl = `${this.BaseUrl}/auth/reset-password?token=${resetToken}`;
+    console.log('Generated reset URL:', resetUrl);
     await this.mailService.sendPasswordResetEmail(user.email, resetUrl);
 }
 
 async resetPassword(token: string, newPassword: string): Promise<void> {
-    const recoveryToken = await this.recoveryTokenRepository.findOne({ where: { token } });
-    if (!recoveryToken || recoveryToken.expiresAt < new Date()) {
-        throw new BadRequestException('Token de recuperación inválido o expirado');
+    try {
+        // Verificar si el token existe
+        const recoveryToken = await this.recoveryTokenRepository.findOne({ where: { token } });
+        if (!recoveryToken) {
+            console.log('Token de recuperación no encontrado:', token);
+            throw new BadRequestException('Token de recuperación inválido o expirado');
+        }
+
+        // Verificar si el token ha expirado
+        if (recoveryToken.expiresAt < new Date()) {
+            console.log('Token de recuperación expirado:', token);
+            throw new BadRequestException('Token de recuperación inválido o expirado');
+        }
+
+        // Obtener el usuario asociado con el token
+        const user = await this.userRepository.findOne({ where: { id: recoveryToken.userId } });
+        if (!user) {
+            console.log('Usuario no encontrado para el token:', token);
+            throw new NotFoundException('Usuario no encontrado');
+        }
+
+        // Actualizar la contraseña del usuario
+        const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+        user.password = hashedPassword;
+        await this.userRepository.save(user);
+
+        // Eliminar el token de recuperación
+        await this.recoveryTokenRepository.delete({ token });
+
+        console.log('Contraseña restablecida exitosamente para el usuario:', user.id);
+    } catch (error) {
+        console.error('Error en el servicio de restablecimiento de contraseña:', error);
+        throw error; // Re-lanzar el error para que NestJS lo maneje
     }
 
-    const user = await this.userRepository.findOne({ where: { id: recoveryToken.user.id } });
-    if (!user) {
-        throw new NotFoundException('Usuario no encontrado');
-    }
 
-    const hashedPassword = bcryptjs.hashSync(newPassword, 10);
-    user.password = hashedPassword;
-    await this.userRepository.save(user);
-
-    // Eliminar el token de recuperación usado
-    await this.recoveryTokenRepository.delete({ token });
+    
 }
-      
-   
+
 }
