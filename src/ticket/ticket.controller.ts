@@ -51,10 +51,9 @@ export class TicketController {
       }
     
       // Comprobar si el usuario tiene permiso para ver el ticket
-      if (user.rol === 'admin') {
-        return ticket; // Admin puede ver cualquier ticket
-      } else if (user.id === ticket.createdBy?.id || (ticket.assignedTo && user.id === ticket.assignedTo?.id)) {
-        return ticket; // Usuario o técnico puede ver su propio ticket
+      // Comprobar si el usuario tiene permiso para ver el ticket
+      if (user.rol === 'admin' || user.id === ticket.createdBy?.id || (ticket.assignedTo && user.id === ticket.assignedTo?.id)) {
+        return ticket; // Admin, creador o técnico asignado puede ver el ticket
       } else {
         throw new ForbiddenException('No tienes permiso para ver este ticket');
       }

@@ -1,7 +1,8 @@
 import { Exclude } from "class-transformer";
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToOne } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
 import { RecoveryToken } from "./recovery-token.entity";
 import { Ticket } from "src/ticket/entity/ticket.entity";
+import { Establecimiento } from "src/colegio/entity/colegio.entity";
 
 @Entity('user')
 export class User {
@@ -22,6 +23,9 @@ export class User {
   
   @Column({ name: 'rol', type: 'nvarchar', nullable: false, default: 'user' })
   rol: string;
+
+  @ManyToOne(() => Establecimiento, { eager: true })
+  establecimiento: Establecimiento;
 
   @OneToMany(() => RecoveryToken, recoveryToken => recoveryToken.user)
   recoveryTokens: RecoveryToken[];

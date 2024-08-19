@@ -11,6 +11,7 @@ import { jwtPayload } from './interfaces/jwt-payload';
 import { RecoveryToken } from './entity/recovery-token.entity';
 import { MailService } from './mail.service';
 import { config } from 'dotenv';
+import { Establecimiento } from 'src/colegio/entity/colegio.entity';
 
 config(); // Cargar variables de entorno
 
@@ -26,7 +27,9 @@ export class AuthService {
         private jwtService: JwtService,
         @InjectRepository(RecoveryToken)
         private recoveryTokenRepository: Repository<RecoveryToken>,
-        private mailService: MailService
+        private mailService: MailService,
+        @InjectRepository(Establecimiento)
+        private establecimientoRepository: Repository<Establecimiento>
 
     ){
         this.BaseUrl = process.env.BASE_URL ;
@@ -34,31 +37,50 @@ export class AuthService {
     // Logica de crear usuario comienza aqui
 
     async createUser(createUserDto: CreateUserDto): Promise<User> {
-
         try {
-
-            const { password, ...userData } = createUserDto;
-
-            const hashedPassword = bcryptjs.hashSync(password, 10);
-            const newUser = this.userRepository.create({
-                ...userData,
-                password: hashedPassword
+          const { password, establecimiento, ...userData } = createUserDto;
+    
+          // Encriptar la contraseña
+          const hashedPassword = bcryptjs.hashSync(password, 10);
+    
+          // Manejar el establecimiento si se proporciona
+          let est;
+          if (establecimiento) {
+            est = await this.establecimientoRepository.findOne({
+              where: {
+                email: establecimiento.email
+              }
             });
-
-            // const newUser = this.userRepository.create( createUserDto);
-
-            await this.userRepository.save(newUser)
-
-            return plainToInstance(User, newUser);
-
-        } catch (error) {
-            if( error.code === 11000 ) {
-                throw new BadRequestException(`${ createUserDto.email } Ya existe ! `)
+    
+            // Si no existe el establecimiento, créalo
+            if (!est) {
+              est = this.establecimientoRepository.create(establecimiento);
+              est = await this.establecimientoRepository.save(est);
             }
-            throw new InternalServerErrorException('Algo terrible sucedio!')
+          }
+    
+          // Crear el nuevo usuario
+          const newUser = this.userRepository.create({
+            ...userData,
+            password: hashedPassword,
+            establecimiento: est // Asociar el establecimiento si existe
+          });
+    
+          // Guardar el nuevo usuario
+          await this.userRepository.save(newUser);
+    
+          // Retornar el usuario como una instancia de User
+          return plainToInstance(User, newUser);
+    
+        } catch (error) {
+          if (error.code === '11000') {
+            throw new BadRequestException(`${createUserDto.email} Ya existe!`);
+          }
+          throw new InternalServerErrorException('Algo terrible sucedió!');
         }
-    }
+      }
 
+      
     async login( loginDto: LoginDto) {
 
         const { email, password } = loginDto;

@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('Establecimiento')
 export class Establecimiento{
+    
     @PrimaryGeneratedColumn()
     id: number;
 

@@ -17,13 +17,13 @@ export class TipoTicketController {
 
     // Obtenemos todos los tipos de ticket
     @Get()
-    getEstablecimientos(){
+    async getEstablecimientos(){
         return this.tipoTicketSercvice.fetchTipoTicket();
     }
 
     // Obtenemos tipos de ticket por ID
     @Get(':id')
-    getEstablecimientoById(@Param('id') id: number ): Promise<TipoTicket> {
+    async getEstablecimientoById(@Param('id') id: number ): Promise<TipoTicket> {
         return this.tipoTicketSercvice.fetchTipoTicketById(id)
     }
 

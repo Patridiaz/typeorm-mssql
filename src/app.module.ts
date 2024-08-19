@@ -14,6 +14,7 @@ import { TicketTypeModule } from './ticket-type/ticket-type.module';
 import { TipoTicket } from './ticket-type/entity/tipo-ticket.entity';
 import { RecoveryToken } from './auth/entity/recovery-token.entity';
 import { MailService } from './auth/mail.service';
+import { RolUserModule } from './rol-user/rol-user.module';
 
 @Module({
   imports: [
@@ -42,6 +43,7 @@ import { MailService } from './auth/mail.service';
     AuthModule,
     EstablecimientoModule,
     TicketTypeModule,
+    RolUserModule,
     
   ],
   controllers:[AuthController],

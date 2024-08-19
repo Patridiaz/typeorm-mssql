@@ -25,6 +25,9 @@ export class Ticket {
     @Column({ type: 'nvarchar', nullable: false })
     establecimiento: string;
 
+    @Column({ type: 'nvarchar', nullable: false })
+    tipoIncidencia: string;
+
     @CreateDateColumn({ type: 'date', nullable: false })
     fecha: Date;
 
@@ -33,5 +36,7 @@ export class Ticket {
   
     @ManyToOne(() => User, user => user.assignedTickets, { nullable: true })
     assignedTo: User;
+
+    
     
   }

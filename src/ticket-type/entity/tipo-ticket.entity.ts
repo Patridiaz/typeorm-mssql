@@ -2,6 +2,7 @@ import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity('TipoTicket')
 export class TipoTicket{
+    
     @PrimaryGeneratedColumn()
     id: number;
 

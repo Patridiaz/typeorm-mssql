@@ -13,6 +13,10 @@ export class CreateTicketDto {
 
   @IsNotEmpty()
   @IsString()
+  tipoIncidencia: string;
+
+  @IsNotEmpty()
+  @IsString()
   email: string;
 
   @IsNotEmpty()
