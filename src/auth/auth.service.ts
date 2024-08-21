@@ -12,6 +12,7 @@ import { RecoveryToken } from './entity/recovery-token.entity';
 import { MailService } from './mail.service';
 import { config } from 'dotenv';
 import { Establecimiento } from 'src/colegio/entity/colegio.entity';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 config(); // Cargar variables de entorno
 
@@ -122,22 +123,22 @@ export class AuthService {
    
 
 
-    findOne(id: number) {
-        return `This action returns a #${id} auth`;
-      }
+    async findOne(id: number): Promise<User> {
+      return this.userRepository.findOneBy({ id });  // Asegúrate de que devuelve un `User`
+    }
 
-    // update(id: number, updateAuthDto:UpdateUserDto) {
-    //     return 'This action update a #${id} auth';
-    // }
+    async update(id: number, updateAuthDto:UpdateUserDto): Promise<User>{
+        await this.userRepository.update(id, updateAuthDto);
+        return this.findOne(id);
+    }
 
     // remove(id: number) {
     //     return 'This action remove a #${id} auth'
     // }
     
-    getJwtToken( payload: jwtPayload ) {
-        const token = this.jwtService.sign(payload);
-        return token;
-      }
+    getJwtToken( payload: jwtPayload ): string {
+        return this.jwtService.sign(payload);
+    }
 
 // Nueva funcionalidad para recuperación de contraseña
 async requestPasswordReset(email: string): Promise<void> {

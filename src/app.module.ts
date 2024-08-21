@@ -30,7 +30,7 @@ import { RolUserModule } from './rol-user/rol-user.module';
       database: process.env.DB_NAME,
       options: {
         encrypt: false,
-        trustServerCertificate: true,
+        trustServerCertificate: false,
       },
       synchronize: true,
       entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken],
