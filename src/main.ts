@@ -18,8 +18,9 @@ async function bootstrap() {
     }));
 
 
-  await app.listen(process.env.PORT || 4000);
-  
+    const port = process.env.DB_PORT || 4000; // Usa el puerto de la variable de entorno o el predeterminado 3000
+    await app.listen(port);
+    console.log(`Application is running on: http://localhost:${port}`);
 
   
 
