@@ -29,6 +29,7 @@ import { RolUserModule } from './rol-user/rol-user.module';
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       options: {
+        instanceName: 'SQLEXPRESS',
         encrypt: false,
         trustServerCertificate: false,
       },
