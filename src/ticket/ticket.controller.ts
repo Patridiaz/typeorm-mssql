@@ -9,7 +9,7 @@ import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { Response } from 'express';
 
 @Controller('ticket')
-// @UseGuards(AuthGuard) // Aplicar el AuthGuard a todas las rutas en este controlador
+@UseGuards(AuthGuard) // Aplicar el AuthGuard a todas las rutas en este controlador
 export class TicketController {
     constructor(private readonly ticketService:TicketService) {}
 
@@ -33,7 +33,7 @@ export class TicketController {
   async getLatestTickets(): Promise<Ticket[]> {
       try {
           const tickets = await this.ticketService.getLatestTickets();
-          console.log('Sending latest tickets:', tickets); // Verifica los datos aquí
+          // console.log('Sending latest tickets:', tickets); // Verifica los datos aquí
           return tickets; // NestJS se encargará de la respuesta JSON
       } catch (error) {
           console.error('Error fetching latest tickets:', error);

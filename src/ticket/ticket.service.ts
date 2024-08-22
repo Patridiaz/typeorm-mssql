@@ -141,7 +141,7 @@ export class TicketService {
             console.warn('No tickets found.');
         }
         
-        console.log('Tickets fetched:', tickets);
+        // console.log('Tickets fetched:', tickets);
         return tickets;
     } catch (error) {
         console.error('Error fetching latest tickets:', error);
