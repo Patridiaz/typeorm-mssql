@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, NotFoundException, Param, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, InternalServerErrorException, NotFoundException, Param, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { Ticket } from './entity/ticket.entity';
@@ -6,9 +6,10 @@ import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Request } from 'express';
 import { User } from 'src/auth/entity/user.entity';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
+import { Response } from 'express';
 
 @Controller('ticket')
-@UseGuards(AuthGuard) // Aplicar el AuthGuard a todas las rutas en este controlador
+// @UseGuards(AuthGuard) // Aplicar el AuthGuard a todas las rutas en este controlador
 export class TicketController {
     constructor(private readonly ticketService:TicketService) {}
 
@@ -26,6 +27,22 @@ export class TicketController {
       throw new ForbiddenException('No tienes permiso para ver los tickets');
     }
   }
+
+
+  @Get('/latest')
+  async getLatestTickets(): Promise<Ticket[]> {
+      try {
+          const tickets = await this.ticketService.getLatestTickets();
+          console.log('Sending latest tickets:', tickets); // Verifica los datos aquí
+          return tickets; // NestJS se encargará de la respuesta JSON
+      } catch (error) {
+          console.error('Error fetching latest tickets:', error);
+          throw new InternalServerErrorException('Error fetching latest tickets');
+      }
+  }
+
+
+
     //Se agrega un ticket
     @Post()
     async createTicket(@Body() createTicketDto: CreateTicketDto, @Req() req: any) {
@@ -38,10 +55,10 @@ export class TicketController {
     @Get('/:id')
     async getTicketById(@Param('id') id: number, @Req() req: Request): Promise<Ticket> {
       const user = req['user'];
-    //   console.log('Usuario:', user);
+      console.log('Usuario:', user);
     
       const ticket = await this.ticketService.fetchTicketById(id);
-    //   console.log('Ticket:', ticket);
+      console.log('Ticket:', ticket);
     
       if (ticket) {
         // console.log('Ticket creado por ID:', ticket.createdBy?.id);

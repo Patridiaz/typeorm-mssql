@@ -129,7 +129,25 @@ export class TicketService {
       throw new InternalServerErrorException('Error fetching tickets by technician ID');
     }
   }
-  
+
+  async getLatestTickets(): Promise<Ticket[]> {
+    try {
+        const tickets = await this.ticketRepository.createQueryBuilder('ticket')
+            .orderBy('ticket.fecha', 'DESC')
+            .limit(1)
+            .getMany();
+        
+        if (tickets.length === 0) {
+            console.warn('No tickets found.');
+        }
+        
+        console.log('Tickets fetched:', tickets);
+        return tickets;
+    } catch (error) {
+        console.error('Error fetching latest tickets:', error);
+        throw new InternalServerErrorException('Error fetching tickets');
+    }
+}
 
 
 }

@@ -8,7 +8,9 @@ import { User } from 'src/auth/entity/user.entity';
 import { TipoTicket } from 'src/ticket-type/entity/tipo-ticket.entity';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([Ticket,User,TipoTicket]), AuthModule],
+  imports:[TypeOrmModule.forFeature([Ticket,User,TipoTicket]),
+  AuthModule
+],
   providers: [TicketService],
   controllers: [TicketController]
 })
