@@ -19,7 +19,7 @@ async function bootstrap() {
 
     
 
-    const port = (parseInt(process.env.PORT) || 4000); // Usa el puerto de la variable de entorno o el predeterminado 3000
+    const port = (parseInt(process.env.PORT) || 3000); // Usa el puerto de la variable de entorno o el predeterminado 3000
     await app.listen(port);
     console.log(`Application is running on: http://localhost:${port}`);
 
