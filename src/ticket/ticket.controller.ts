@@ -55,10 +55,10 @@ export class TicketController {
     @Get('/:id')
     async getTicketById(@Param('id') id: number, @Req() req: Request): Promise<Ticket> {
       const user = req['user'];
-      console.log('Usuario:', user);
+      // console.log('Usuario:', user);
     
       const ticket = await this.ticketService.fetchTicketById(id);
-      console.log('Ticket:', ticket);
+      // console.log('Ticket:', ticket);
     
       if (ticket) {
         // console.log('Ticket creado por ID:', ticket.createdBy?.id);

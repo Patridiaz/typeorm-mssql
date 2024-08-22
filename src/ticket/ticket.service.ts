@@ -134,7 +134,7 @@ export class TicketService {
     try {
         const tickets = await this.ticketRepository.createQueryBuilder('ticket')
             .orderBy('ticket.fecha', 'DESC')
-            .limit(1)
+            .limit(10)
             .getMany();
         
         if (tickets.length === 0) {
