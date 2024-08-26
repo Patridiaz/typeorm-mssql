@@ -127,8 +127,21 @@ export class AuthService {
       return this.userRepository.findOneBy({ id });  // Asegúrate de que devuelve un `User`
     }
 
-    async update(id: number, updateAuthDto:UpdateUserDto): Promise<User>{
-        await this.userRepository.update(id, updateAuthDto);
+    // Actualizar un usuario
+    async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+        // Verifica si el usuario existe
+        const user = await this.userRepository.findOne({ where: { id } });
+        if (!user) {
+            throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+        }
+
+        // Si se proporciona una nueva contraseña, encripta la contraseña
+        if (updateUserDto.password) {
+            updateUserDto.password = bcryptjs.hashSync(updateUserDto.password, 10);
+        }
+
+        // Actualiza el usuario con los datos del DTO
+        await this.userRepository.update(id, updateUserDto);
         return this.findOne(id);
     }
 

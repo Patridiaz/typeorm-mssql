@@ -148,6 +148,4 @@ export class TicketService {
         throw new InternalServerErrorException('Error fetching tickets');
     }
 }
-
-
 }
