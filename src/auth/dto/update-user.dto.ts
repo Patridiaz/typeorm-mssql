@@ -3,9 +3,11 @@ import { CreateEstablecimientoDto } from "src/colegio/dto/create-colegio.dto";
 
 export class UpdateUserDto {
 
+    @IsOptional()
     @IsEmail()
     email: string;
 
+    @IsOptional()
     @IsString()
     name: string;
     

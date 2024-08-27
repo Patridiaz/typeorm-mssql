@@ -129,6 +129,18 @@ export class TicketService {
       throw new InternalServerErrorException('Error fetching tickets by technician ID');
     }
   }
+  
+    // Método para obtener el total de tickets de mantención
+    async countTicketsByType(tipoIncidencia: string): Promise<number> {
+      try {
+        const count = await this.ticketRepository.count({
+          where: { tipoIncidencia },
+        });
+        return count; // Devuelve el conteo
+      } catch (error) {
+        throw new InternalServerErrorException('Error al contar tickets por tipo');
+      }
+    }
 
   async getLatestTickets(): Promise<Ticket[]> {
     try {

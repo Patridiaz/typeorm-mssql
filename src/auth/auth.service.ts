@@ -174,7 +174,7 @@ async requestPasswordReset(email: string): Promise<void> {
 
     // Enviar correo electrónico
     const resetUrl = `${this.BaseUrl}/auth/reset-password?token=${resetToken}`;
-    console.log('Generated reset URL:', resetUrl);
+    // console.log('Generated reset URL:', resetUrl);
     await this.mailService.sendPasswordResetEmail(user.email, resetUrl);
 }
 

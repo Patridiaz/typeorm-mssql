@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, InternalServerErrorException, NotFoundException, Param, Post, Put, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, InternalServerErrorException, NotFoundException, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { Ticket } from './entity/ticket.entity';
@@ -28,6 +28,19 @@ export class TicketController {
     }
   }
 
+  // Controlador en el backend
+  @Get('/count')
+  async countTicketsByType(@Query('tipoIncidencia') tipoIncidencia: string): Promise<number> {
+    // console.log('Tipo de incidencia recibido:', tipoIncidencia);
+    try {
+      const count = await this.ticketService.countTicketsByType(tipoIncidencia);
+      console.log('Conteo de tickets:', count);
+      return count;
+    } catch (error) {
+      // console.error('Error al obtener el conteo de tickets:', error);
+      throw new InternalServerErrorException('Error al obtener el conteo de tickets');
+    }
+  }
 
   @Get('/latest')
   async getLatestTickets(): Promise<Ticket[]> {

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Get, InternalServerErrorException, Param, Post, Put, Query, Request, UnauthorizedException, UseGuards } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Get, InternalServerErrorException, NotFoundException, Param, Post, Put, Query, Request, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { User } from './entity/user.entity';
@@ -82,12 +82,21 @@ export class AuthController {
         @Param('id') id: number, 
         @Body() updateUserDto: UpdateUserDto
     ): Promise<User> {
-        // Llama al servicio de actualización y maneja el resultado
         try {
+            // Llama al servicio de actualización y maneja el resultado
             return await this.authService.updateUser(id, updateUserDto);
         } catch (error) {
-            // Maneja posibles errores
-            throw new InternalServerErrorException('Error al actualizar el usuario');
+            // Maneja posibles errores específicos
+            if (error instanceof NotFoundException) {
+                throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+            } else if (error instanceof UnauthorizedException) {
+                throw new UnauthorizedException('No tienes permiso para realizar esta acción');
+            } else if (error instanceof BadRequestException) {
+                throw new BadRequestException('Datos de entrada inválidos');
+            } else {
+                // Si es otro tipo de error, lanza una excepción interna
+                throw new InternalServerErrorException('Error al actualizar el usuario');
+            }
         }
     }
 
