@@ -183,20 +183,20 @@ async resetPassword(token: string, newPassword: string): Promise<void> {
         // Verificar si el token existe
         const recoveryToken = await this.recoveryTokenRepository.findOne({ where: { token } });
         if (!recoveryToken) {
-            console.log('Token de recuperación no encontrado:', token);
+            // console.log('Token de recuperación no encontrado:', token);
             throw new BadRequestException('Token de recuperación inválido o expirado');
         }
 
         // Verificar si el token ha expirado
         if (recoveryToken.expiresAt < new Date()) {
-            console.log('Token de recuperación expirado:', token);
+            // console.log('Token de recuperación expirado:', token);
             throw new BadRequestException('Token de recuperación inválido o expirado');
         }
 
         // Obtener el usuario asociado con el token
         const user = await this.userRepository.findOne({ where: { id: recoveryToken.userId } });
         if (!user) {
-            console.log('Usuario no encontrado para el token:', token);
+            // console.log('Usuario no encontrado para el token:', token);
             throw new NotFoundException('Usuario no encontrado');
         }
 
@@ -208,7 +208,7 @@ async resetPassword(token: string, newPassword: string): Promise<void> {
         // Eliminar el token de recuperación
         await this.recoveryTokenRepository.delete({ token });
 
-        console.log('Contraseña restablecida exitosamente para el usuario:', user.id);
+        // console.log('Contraseña restablecida exitosamente para el usuario:', user.id);
     } catch (error) {
         console.error('Error en el servicio de restablecimiento de contraseña:', error);
         throw error; // Re-lanzar el error para que NestJS lo maneje

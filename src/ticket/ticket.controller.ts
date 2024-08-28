@@ -21,7 +21,7 @@ export class TicketController {
       return this.ticketService.fetchTickets(); // Admin puede ver todos los tickets
     } else if (user.rol === 'user') {
       return this.ticketService.fetchTicketsByUserId(user.id); // User solo puede ver sus propios tickets
-    } else if (user.rol === 'tecnico') {
+    } else if (user.rol === 'tecnico_informatica' || user.rol === 'tecnico_mantencion') {
       return this.ticketService.fetchTicketsByTechnicianId(user.id); // Técnico solo puede ver los tickets asignados a él
     } else {
       throw new ForbiddenException('No tienes permiso para ver los tickets');
@@ -34,7 +34,7 @@ export class TicketController {
     // console.log('Tipo de incidencia recibido:', tipoIncidencia);
     try {
       const count = await this.ticketService.countTicketsByType(tipoIncidencia);
-      console.log('Conteo de tickets:', count);
+      // console.log('Conteo de tickets:', count);
       return count;
     } catch (error) {
       // console.error('Error al obtener el conteo de tickets:', error);
@@ -95,17 +95,28 @@ export class TicketController {
     // return this.ticketService.removeTicket(id);
     // }
 
-    // // Update a ticket by ID
-    // @Put('/:id')
-    // async updateTicket(@Param('id') id: number, @Body() data: UpdateTicketDto) {
-    // const ticket = new Ticket();
-    // Object.assign(ticket, data);
-    // await this.ticketService.updateTicket(id, ticket);
-    // return { message: 'Ticket fue actualizado correctamente ! ', id };
-    // }
-    // }
+    // Update a ticket by ID
+    @Put('/:id')
+  async updateTicket(@Param('id') id: number, @Body() updateTicketDto: UpdateTicketDto, @Req() req: Request) {
+    const user = req['user'];
 
+    // Verifica que el usuario tenga el rol adecuado
+    if (user.rol !== 'admin' && user.rol !== 'tecnico_informatica' && user.rol !== 'tecnico_mantencion') {
+      throw new ForbiddenException('No tienes permiso para actualizar el estado del ticket');
+    }
 
+    // Verifica si el ticket existe
+    const ticket = await this.ticketService.fetchTicketById(id);
+
+    if (!ticket) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+
+    // Actualiza el ticket con los datos del DTO
+    await this.ticketService.updateTicket(id, updateTicketDto);
+
+    return { message: 'Estado del ticket actualizado correctamente', id };
+  }
 }
 
 
