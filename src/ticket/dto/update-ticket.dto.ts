@@ -6,4 +6,10 @@ export class UpdateTicketDto {
   @IsNotEmpty()
   @IsString()
   estado: string;
+
+  @IsNotEmpty()
+  @IsString()
+  comentario: string;
+
+  
   }

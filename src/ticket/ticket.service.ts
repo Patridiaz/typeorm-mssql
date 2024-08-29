@@ -89,9 +89,12 @@ export class TicketService {
       }
   
       // Actualiza solo el campo 'estado'
-      if (updateData.estado) {
+      if (updateData.estado || updateData.comentario) {
         ticket.estado = updateData.estado;
+        ticket.comentario = updateData.comentario
       }
+
+      
   
       await this.ticketRepository.save(ticket);
     }

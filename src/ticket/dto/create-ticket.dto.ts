@@ -27,6 +27,10 @@ export class CreateTicketDto {
   @IsString()
   incidencia: string;
 
+  @IsOptional()
+  @IsString()
+  comentario: string;
+
   @IsNotEmpty()
   @IsString()
   estado: string;

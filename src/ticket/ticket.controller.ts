@@ -102,7 +102,7 @@ export class TicketController {
 
     // Verifica que el usuario tenga el rol adecuado
     if (user.rol !== 'admin' && user.rol !== 'tecnico_informatica' && user.rol !== 'tecnico_mantencion') {
-      throw new ForbiddenException('No tienes permiso para actualizar el estado del ticket');
+      throw new ForbiddenException('No tienes permiso para actualizarla información del ticket');
     }
 
     // Verifica si el ticket existe

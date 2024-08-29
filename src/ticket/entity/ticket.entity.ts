@@ -19,6 +19,9 @@ export class Ticket {
     @Column({  type: 'nvarchar', nullable: false })
     incidencia: string;
 
+    @Column({  type: 'nvarchar', nullable: true })
+    comentario: string;
+
     @Column({ type: 'nvarchar', nullable: false })
     estado: string;
 
@@ -28,7 +31,7 @@ export class Ticket {
     @Column({ type: 'nvarchar', nullable: false })
     tipoIncidencia: string;
 
-    @CreateDateColumn({ type: 'date', nullable: false })
+    @CreateDateColumn({ type: 'datetime2', default: () => 'SYSDATETIME()' })
     fecha: Date;
 
     @ManyToOne(() => User, user => user.createdTickets)
