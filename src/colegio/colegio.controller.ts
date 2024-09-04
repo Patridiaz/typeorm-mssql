@@ -1,7 +1,8 @@
-import { Body, Controller, Get, Param, Post } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
 import { EstablecimientoService } from './colegio.service';
 import { CreateEstablecimientoDto } from './dto/create-colegio.dto';
 import { Establecimiento } from './entity/colegio.entity';
+import { UpdateEstablecimientoDto } from './dto/update-colegio';
 
 @Controller('establecimiento')
 export class EstablecimientoController {
@@ -27,6 +28,12 @@ export class EstablecimientoController {
         return this.establecimientoService.fetchEstablecimientoById(id)
     }
 
-    
+    @Put(':id')
+    async updateEstablecimiento(
+      @Param('id') id: number,
+      @Body() updateEstablecimientoDto: UpdateEstablecimientoDto,
+    ): Promise<Establecimiento> {
+      return this.establecimientoService.updateEstablecimiento(id, updateEstablecimientoDto);
+    }
 
 }

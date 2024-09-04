@@ -25,6 +25,7 @@ export class User {
   rol: string;
 
   @ManyToOne(() => Establecimiento, { eager: true })
+  @JoinColumn({ name: 'establecimientoId' })  // Especifica el nombre de la columna de la relación
   establecimiento: Establecimiento;
 
   @OneToMany(() => RecoveryToken, recoveryToken => recoveryToken.user)

@@ -23,6 +23,7 @@ export class UpdateUserDto {
     @IsBoolean()
     isActive?: boolean;
 
+    @IsOptional()
     @IsString() // Asegura que el rol sea una cadena
     rol: string;
 

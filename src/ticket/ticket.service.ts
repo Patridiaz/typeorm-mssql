@@ -18,48 +18,74 @@ export class TicketService {
 
     // La Logica del CRUD para el tickets comienza aqui
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
-      const { tecnico, tipoIncidencia, ...ticketData } = createTicketDto;
-    
+      const { tipoIncidencia, ...ticketData } = createTicketDto;
+
       // Buscar el usuario que está creando el ticket
       const user = await this.userRepository.findOne({
-        where: { id: userId },
-        relations: ['establecimiento'], // Asegúrate de cargar el establecimiento relacionado
+          where: { id: userId },
+          relations: ['establecimiento'], // Asegúrate de cargar el establecimiento relacionado
       });
-    
+
       if (!user) {
-        throw new ForbiddenException('Usuario no encontrado');
+          throw new ForbiddenException('Usuario no encontrado');
       }
-    
+
       let tecnicoUser = null;
-    
-      // Asignar técnico solo si el tipo de incidencia es "Informatica"
-      if (tipoIncidencia === 'Informatica') {
-        if (tecnico) {
-          tecnicoUser = await this.userRepository.findOne({ where: { id: Number(tecnico) } });
-        } else {
+      let ticketEstado = 'Pendiente'; // Estado por defecto
+
+      // Agregar logs para verificar el usuario y el establecimiento
+      console.log('Usuario encontrado:', user);
+      console.log('Establecimiento del usuario:', user.establecimiento);
+
+      // Asignar técnico solo si el tipo de incidencia es "Informática"
+      if (tipoIncidencia === 'Informática') {
+          // Buscar un técnico de informática en el mismo establecimiento
           tecnicoUser = await this.userRepository.findOne({
-            where: {
-              establecimiento: user.establecimiento,
-              rol: 'tecnico_informatica',
-            },
+              where: {
+                  establecimiento: user.establecimiento, // Verifica que esto coincida con el campo en la base de datos
+                  rol: 'tecnico_informatica',
+              },
           });
-    
-          if (!tecnicoUser) {
-            throw new ForbiddenException('No se encontró un técnico asignado para este colegio');
+
+          // Agregar log para verificar si se encontró un técnico
+          console.log('Técnico encontrado:', tecnicoUser);
+
+          if (tecnicoUser) {
+              ticketEstado = 'Asignado'; // Cambiar estado si se encontró un técnico adecuado
+          } else {
+              ticketEstado = 'Técnico por asignar'; // Cambiar estado si no se encontró técnico
           }
-        }
       }
-    
-      // Crear el ticket asegurando que tipoIncidencia se incluye
-      const ticket = this.ticketRepository.create({
-        ...ticketData,
-        tipoIncidencia,  // Aseguramos que tipoIncidencia no sea null
-        createdBy: user,
-        assignedTo: tecnicoUser,  // Puede ser null si tipoIncidencia es "Mantencion"
+
+      // Depuración: Verifica los valores antes de crear el ticket
+      console.log('Datos del ticket antes de guardar:', {
+          ...ticketData,
+          tipoIncidencia,
+          createdBy: user,
+          assignedTo: tecnicoUser,
+          estado: ticketEstado,
       });
+
+      // Crear el ticket asegurando que tipoIncidencia se incluye y el estado asignado
+      const ticket = this.ticketRepository.create({
+          ...ticketData,
+          tipoIncidencia,  // Aseguramos que tipoIncidencia no sea null
+          createdBy: user,
+          assignedTo: tecnicoUser,  // Puede ser null si tipoIncidencia no es "Informática" o si no hay técnico disponible
+          estado: ticketEstado,  // Agregamos el estado del ticket
+      });
+
+      // Guardar el ticket
+      try {
+          const savedTicket = await this.ticketRepository.save(ticket);
+          console.log('Ticket guardado con éxito:', savedTicket);
+          return savedTicket;
+      } catch (error) {
+          console.error('Error al guardar el ticket:', error);
+          throw new InternalServerErrorException('Error al guardar el ticket');
+      }
+  }
     
-      return this.ticketRepository.save(ticket);
-    }
     
 
     // Obtenemos (FETCH)  todas los tickets de la base de datos
