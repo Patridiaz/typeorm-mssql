@@ -1,4 +1,5 @@
 import { User } from 'src/auth/entity/user.entity';
+import { Establecimiento } from 'src/colegio/entity/colegio.entity';
 import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne } from 'typeorm';
 
 @Entity('ticket') //This maps the notes entity to the 'ticket' table in your DB
@@ -25,20 +26,20 @@ export class Ticket {
     @Column({ type: 'nvarchar', nullable: false })
     estado: string;
 
-    @Column({ type: 'nvarchar', nullable: false })
-    establecimiento: string;
+    @ManyToOne(() => Establecimiento, { eager: true })
+    establecimiento: Establecimiento; // Asegúrate de que esté definido
 
     @Column({ type: 'nvarchar', nullable: false })
     tipoIncidencia: string;
 
-    @CreateDateColumn({ type: 'datetime2', default: () => 'SYSDATETIME()' })
+    @Column({ type: 'datetime2' })
     fecha: Date;
 
     @ManyToOne(() => User, user => user.createdTickets)
     createdBy: User;
   
-    @ManyToOne(() => User, user => user.assignedTickets, { nullable: true })
-    assignedTo: User;
+    @ManyToOne(() => User, { nullable: true })
+    assignedTo?: User;
 
     
     

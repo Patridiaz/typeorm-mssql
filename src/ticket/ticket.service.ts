@@ -5,6 +5,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { User } from 'src/auth/entity/user.entity';
+import { Establecimiento } from 'src/colegio/entity/colegio.entity';
 
 @Injectable()
 export class TicketService {
@@ -14,77 +15,67 @@ export class TicketService {
         private readonly ticketRepository: Repository<Ticket>,
         @InjectRepository(User)
         private readonly userRepository: Repository<User>,
+        @InjectRepository(Establecimiento)
+        private readonly establecimientoRepository: Repository<Establecimiento>,
     ){}
 
     // La Logica del CRUD para el tickets comienza aqui
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
-      const { tipoIncidencia, ...ticketData } = createTicketDto;
-
+      // console.log('Datos recibidos en el backend:', createTicketDto);
+      const { tipoIncidencia, establecimiento, assignedTo, ...ticketData } = createTicketDto;
+    
       // Buscar el usuario que está creando el ticket
       const user = await this.userRepository.findOne({
-          where: { id: userId },
-          relations: ['establecimiento'], // Asegúrate de cargar el establecimiento relacionado
+        where: { id: userId },
+        relations: ['establecimiento'],
       });
-
+    
       if (!user) {
-          throw new ForbiddenException('Usuario no encontrado');
+        throw new ForbiddenException('Usuario no encontrado');
       }
-
+    
       let tecnicoUser = null;
       let ticketEstado = 'Pendiente'; // Estado por defecto
-
-      // Agregar logs para verificar el usuario y el establecimiento
-      console.log('Usuario encontrado:', user);
-      console.log('Establecimiento del usuario:', user.establecimiento);
-
+    
+      // Buscar el establecimiento por ID
+      const establecimientoEntity = await this.establecimientoRepository.findOne({
+        where: { id: establecimiento }
+      });
+    
+      if (!establecimientoEntity) {
+        throw new NotFoundException('Establecimiento no encontrado');
+      }
+    
       // Asignar técnico solo si el tipo de incidencia es "Informática"
-      if (tipoIncidencia === 'Informática') {
-          // Buscar un técnico de informática en el mismo establecimiento
-          tecnicoUser = await this.userRepository.findOne({
-              where: {
-                  establecimiento: user.establecimiento, // Verifica que esto coincida con el campo en la base de datos
-                  rol: 'tecnico_informatica',
-              },
-          });
-
-          // Agregar log para verificar si se encontró un técnico
-          console.log('Técnico encontrado:', tecnicoUser);
-
-          if (tecnicoUser) {
-              ticketEstado = 'Asignado'; // Cambiar estado si se encontró un técnico adecuado
-          } else {
-              ticketEstado = 'Técnico por asignar'; // Cambiar estado si no se encontró técnico
-          }
+      if (tipoIncidencia === 'Informatica' && assignedTo) {
+        tecnicoUser = await this.userRepository.findOne({ where: { id: assignedTo } });
+    
+        if (tecnicoUser) {
+          ticketEstado = 'Asignado';
+        } else {
+          ticketEstado = 'Técnico por asignar';
+        }
       }
-
-      // Depuración: Verifica los valores antes de crear el ticket
-      console.log('Datos del ticket antes de guardar:', {
-          ...ticketData,
-          tipoIncidencia,
-          createdBy: user,
-          assignedTo: tecnicoUser,
-          estado: ticketEstado,
-      });
-
-      // Crear el ticket asegurando que tipoIncidencia se incluye y el estado asignado
+    
+      // Crear el ticket
       const ticket = this.ticketRepository.create({
-          ...ticketData,
-          tipoIncidencia,  // Aseguramos que tipoIncidencia no sea null
-          createdBy: user,
-          assignedTo: tecnicoUser,  // Puede ser null si tipoIncidencia no es "Informática" o si no hay técnico disponible
-          estado: ticketEstado,  // Agregamos el estado del ticket
+        ...ticketData,
+        tipoIncidencia,
+        createdBy: user,
+        assignedTo: tecnicoUser, // Solo asignar si existe un técnico
+        estado: ticketEstado,
+        establecimiento: establecimientoEntity, // Asignar el establecimiento
       });
-
-      // Guardar el ticket
+    
       try {
-          const savedTicket = await this.ticketRepository.save(ticket);
-          console.log('Ticket guardado con éxito:', savedTicket);
-          return savedTicket;
+        const savedTicket = await this.ticketRepository.save(ticket);
+        // console.log('Ticket guardado con éxito:', savedTicket);
+        return savedTicket;
       } catch (error) {
-          console.error('Error al guardar el ticket:', error);
-          throw new InternalServerErrorException('Error al guardar el ticket');
+        console.error('Error al guardar el ticket:', error);
+        throw new InternalServerErrorException('Error al guardar el ticket');
       }
-  }
+    }
     
     
 
@@ -96,8 +87,9 @@ export class TicketService {
     async fetchTicketById(id: number): Promise<Ticket> {
       try {
         return await this.ticketRepository.createQueryBuilder('ticket')
-          .leftJoinAndSelect('ticket.assignedTo', 'assignedTo') // Asegúrate de incluir la relación
-          .leftJoinAndSelect('ticket.createdBy', 'createdBy') // Incluye la relación con el creador del ticket
+          .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')
+          .leftJoinAndSelect('ticket.createdBy', 'createdBy')
+          .leftJoinAndSelect('ticket.establecimiento', 'establecimiento') // Asegúrate de incluir esta relación
           .where('ticket.id = :id', { id })
           .getOne();
       } catch (error) {
@@ -105,25 +97,32 @@ export class TicketService {
         throw new InternalServerErrorException('Error fetching ticket by ID');
       }
     }
+    
 
-    // Actualizar ticket
-    async updateTicket(id: number, updateData: Partial<Ticket>): Promise<void> {
-      const ticket = await this.ticketRepository.findOne({where: {id}});
-  
+    async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<void> {
+      const ticket = await this.ticketRepository.findOne({ where: { id } });
       if (!ticket) {
         throw new NotFoundException('Ticket no encontrado');
       }
   
-      // Actualiza solo el campo 'estado'
-      if (updateData.estado || updateData.comentario) {
-        ticket.estado = updateData.estado;
-        ticket.comentario = updateData.comentario
+      // Actualiza los campos con los datos del DTO
+      if (updateTicketDto.estado) {
+        ticket.estado = updateTicketDto.estado;
       }
-
-      
+      if (updateTicketDto.comentario) {
+        ticket.comentario = updateTicketDto.comentario;
+      }
+      if (updateTicketDto.assignedTo !== undefined) {
+        const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
+        if (!user) {
+          throw new NotFoundException('Técnico no encontrado');
+        }
+        ticket.assignedTo = user;
+      }
   
       await this.ticketRepository.save(ticket);
     }
+    
 
     //Eliminar ticket de la base de datos por ID
     async removeTicket(id:string){
@@ -133,7 +132,6 @@ export class TicketService {
         }
         return {message: 'Ticket fue eliminado con exito.!'}
     }
-
 
 
     //Buscamos el ticket dependiendo el rol de usuario

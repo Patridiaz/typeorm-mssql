@@ -213,9 +213,27 @@ async resetPassword(token: string, newPassword: string): Promise<void> {
         console.error('Error en el servicio de restablecimiento de contraseña:', error);
         throw error; // Re-lanzar el error para que NestJS lo maneje
     }
-
-
-    
 }
+
+
+async findTecnicoByEstablecimiento(establecimientoId: number): Promise<User> {
+    const tecnico = await this.userRepository.findOne({
+      where: {
+        establecimiento: { id: establecimientoId },
+        rol: 'tecnico_informatica'
+      }
+    });
+  
+    if (!tecnico) {
+      throw new NotFoundException('Técnico no encontrado para el establecimiento');
+    }
+  
+    return tecnico;
+  }
+
+  async getTechnicians(): Promise<User[]> {
+    return this.userRepository.find({ where: { rol: 'tecnico_informatica' } });
+  }
+  
 
 }

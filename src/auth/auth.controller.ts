@@ -100,9 +100,16 @@ export class AuthController {
         }
     }
 
-
-
-
+    @Get('tecnico/:establecimientoId')
+    async getTecnicoByEstablecimiento(@Param('establecimientoId') establecimientoId: number) {
+      // Asegúrate de que el ID del establecimiento sea un número si tu método lo requiere
+      return this.authService.findTecnicoByEstablecimiento(establecimientoId);
+    }
+  
+    @Get('tecnicos')
+    async getTechnicians(): Promise<User[]> {
+      return this.authService.getTechnicians();
+    }
 
 
 }

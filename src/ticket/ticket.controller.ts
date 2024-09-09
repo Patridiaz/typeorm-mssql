@@ -66,28 +66,21 @@ export class TicketController {
 
     
     @Get('/:id')
-    async getTicketById(@Param('id') id: number, @Req() req: Request): Promise<Ticket> {
-      const user = req['user'];
-      // console.log('Usuario:', user);
-    
-      const ticket = await this.ticketService.fetchTicketById(id);
-      // console.log('Ticket:', ticket);
-    
-      if (ticket) {
-        // console.log('Ticket creado por ID:', ticket.createdBy?.id);
-        // console.log('Ticket asignado a ID:', ticket.assignedTo?.id);
-      } else {
-        // console.log('No se encontró el ticket con el ID proporcionado');
-      }
-    
-      // Comprobar si el usuario tiene permiso para ver el ticket
-      // Comprobar si el usuario tiene permiso para ver el ticket
-      if (user.rol === 'admin' || user.id === ticket.createdBy?.id || (ticket.assignedTo && user.id === ticket.assignedTo?.id)) {
-        return ticket; // Admin, creador o técnico asignado puede ver el ticket
-      } else {
-        throw new ForbiddenException('No tienes permiso para ver este ticket');
-      }
+async getTicketById(@Param('id') id: number, @Req() req: Request): Promise<Ticket> {
+  const user = req['user'];
+  const ticket = await this.ticketService.fetchTicketById(id);
+
+  if (ticket) {
+    if (user.rol === 'admin' || user.id === ticket.createdBy?.id || (ticket.assignedTo && user.id === ticket.assignedTo?.id)) {
+      return ticket;
+    } else {
+      throw new ForbiddenException('No tienes permiso para ver este ticket');
     }
+  } else {
+    throw new NotFoundException('Ticket no encontrado');
+  }
+}
+
     
     // // Delete a ticket by ID
     // @Delete('/:id')
@@ -95,19 +88,22 @@ export class TicketController {
     // return this.ticketService.removeTicket(id);
     // }
 
-    // Update a ticket by ID
-    @Put('/:id')
-  async updateTicket(@Param('id') id: number, @Body() updateTicketDto: UpdateTicketDto, @Req() req: Request) {
+    // Actualiza un ticket por ID
+  @Put('/:id')
+  async updateTicket(
+    @Param('id') id: number,
+    @Body() updateTicketDto: UpdateTicketDto,
+    @Req() req: Request
+  ) {
     const user = req['user'];
 
     // Verifica que el usuario tenga el rol adecuado
-    if (user.rol !== 'admin' && user.rol !== 'tecnico_informatica' && user.rol !== 'tecnico_mantencion') {
-      throw new ForbiddenException('No tienes permiso para actualizarla información del ticket');
+    if (!['admin', 'tecnico_informatica', 'tecnico_mantencion'].includes(user.rol)) {
+      throw new ForbiddenException('No tienes permiso para actualizar la información del ticket');
     }
 
     // Verifica si el ticket existe
     const ticket = await this.ticketService.fetchTicketById(id);
-
     if (!ticket) {
       throw new NotFoundException('Ticket no encontrado');
     }

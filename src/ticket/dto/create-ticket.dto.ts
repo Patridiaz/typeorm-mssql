@@ -9,7 +9,7 @@ export class CreateTicketDto {
 
   @IsNotEmpty()
   @IsString()
-  establecimiento: string;
+  establecimiento: number;
 
   @IsNotEmpty()
   @IsString()
@@ -36,21 +36,14 @@ export class CreateTicketDto {
   estado: string;
 
 
-  @IsOptional()
-  @IsNumber({}, { each: true })
-  tecnico?: number;
 
   @IsNotEmpty()
   @Type(() => Date)
   @IsDate()
   fecha: Date;
 
-  assignedTo?: UserDto;  // Asegúrate de incluir esta propiedad
-
-  // Puedes incluir el UserDto si lo usas
+  @IsOptional()
+  @IsNumber()
+  assignedTo?: number;
 }
 
-export class UserDto {
-  id: number;
-  name: string;
-}

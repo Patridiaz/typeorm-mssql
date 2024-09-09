@@ -36,4 +36,6 @@ export class EstablecimientoController {
       return this.establecimientoService.updateEstablecimiento(id, updateEstablecimientoDto);
     }
 
+    
+
 }

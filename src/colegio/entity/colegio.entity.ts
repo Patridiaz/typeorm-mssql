@@ -1,4 +1,5 @@
-import { Entity, Column, PrimaryGeneratedColumn } from "typeorm";
+import { Ticket } from "src/ticket/entity/ticket.entity";
+import { Entity, Column, PrimaryGeneratedColumn, OneToMany } from "typeorm";
 
 @Entity('Establecimiento')
 export class Establecimiento{
@@ -18,8 +19,8 @@ export class Establecimiento{
     @Column({ type: 'varchar', length:255, nullable: true })
     email?: string;
 
-
-
+    @OneToMany(() => Ticket, ticket => ticket.establecimiento)
+    tickets: Ticket[]; // Agrega esta propiedad para la relación inversa
 
 
 }
