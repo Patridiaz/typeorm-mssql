@@ -38,49 +38,60 @@ export class AuthService {
     // Logica de crear usuario comienza aqui
 
     async createUser(createUserDto: CreateUserDto): Promise<User> {
-        try {
-          const { password, establecimiento, ...userData } = createUserDto;
+      try {
+        const { password, establecimiento, ...userData } = createUserDto;
     
-          // Encriptar la contraseña
-          const hashedPassword = bcryptjs.hashSync(password, 10);
+        // Verificar si el correo ya está en uso
+        const existingUser = await this.userRepository.findOne({
+          where: {
+            email: userData.email,
+          },
+        });
+
+        console.log('Usuario existente:', existingUser);
     
-          // Manejar el establecimiento si se proporciona
-          let est;
-          if (establecimiento) {
-            est = await this.establecimientoRepository.findOne({
-              where: {
-                email: establecimiento.email
-              }
-            });
+        if (existingUser) {
+          throw new BadRequestException('El correo electrónico ya está en uso.');
+        }
     
-            // Si no existe el establecimiento, créalo
-            if (!est) {
-              est = this.establecimientoRepository.create(establecimiento);
-              est = await this.establecimientoRepository.save(est);
-            }
-          }
+        // Encriptar la contraseña
+        const hashedPassword = bcryptjs.hashSync(password, 10);
     
-          // Crear el nuevo usuario
-          const newUser = this.userRepository.create({
-            ...userData,
-            password: hashedPassword,
-            establecimiento: est // Asociar el establecimiento si existe
+        let est = null;
+    
+        if (establecimiento) {
+          est = await this.establecimientoRepository.findOne({
+            where: {
+              id: establecimiento,
+            },
           });
     
-          // Guardar el nuevo usuario
-          await this.userRepository.save(newUser);
-    
-          // Retornar el usuario como una instancia de User
-          return plainToInstance(User, newUser);
-    
-        } catch (error) {
-          if (error.code === '11000') {
-            throw new BadRequestException(`${createUserDto.email} Ya existe!`);
+          if (!est) {
+            throw new BadRequestException('Establecimiento no encontrado');
           }
-          throw new InternalServerErrorException('Algo terrible sucedió!');
         }
+    
+        // Crear el nuevo usuario
+        const newUser = this.userRepository.create({
+          ...userData,
+          password: hashedPassword,
+          establecimiento: est, // Asociar el establecimiento si existe
+        });
+    
+        // Guardar el nuevo usuario
+        await this.userRepository.save(newUser);
+    
+        // Retornar el usuario como una instancia de User
+        return plainToInstance(User, newUser);
+      } catch (error) {
+        if (error.code === '11000') {
+          throw new BadRequestException(`${createUserDto.email} ya existe!`);
+        }
+        throw new InternalServerErrorException('Algo terrible sucedió!');
       }
-
+    }
+    
+    
       
     async login( loginDto: LoginDto) {
 
@@ -124,8 +135,18 @@ export class AuthService {
 
 
     async findOne(id: number): Promise<User> {
-      return this.userRepository.findOneBy({ id });  // Asegúrate de que devuelve un `User`
+      const user = await this.userRepository.findOne({
+        where: { id },
+        select: ['id', 'name'] // Selecciona solo los campos necesarios, excluyendo la contraseña si se usa
+      });
+      
+      if (!user) {
+        throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
+      }
+    
+      return user;
     }
+
 
     // Actualizar un usuario
     async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {

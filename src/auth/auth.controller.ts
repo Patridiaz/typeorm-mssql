@@ -28,8 +28,6 @@ export class AuthController {
         return this.authService.findAll();
     }
 
-
-
     // LoginResponse
   @UseGuards( AuthGuard )
   @Get('check-token')
@@ -110,6 +108,7 @@ export class AuthController {
     async getTechnicians(): Promise<User[]> {
       return this.authService.getTechnicians();
     }
+
 
 
 }

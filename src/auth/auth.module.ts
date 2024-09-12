@@ -23,6 +23,6 @@ import { Establecimiento } from 'src/colegio/entity/colegio.entity';
   ],
   providers: [AuthService, MailService],
   controllers: [AuthController],
-  exports: [AuthService, TypeOrmModule], // Exporta AuthService para que otros módulos puedan usarlo
+  exports: [AuthService, TypeOrmModule,MailService], // Exporta AuthService para que otros módulos puedan usarlo
 })
 export class AuthModule {}

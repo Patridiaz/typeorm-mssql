@@ -7,9 +7,9 @@ export class UpdateTicketDto {
   @IsString()
   estado: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  comentario: string;
+  comentario?: string;
 
   @IsOptional() // El ID del técnico puede no ser obligatorio
   @IsInt()

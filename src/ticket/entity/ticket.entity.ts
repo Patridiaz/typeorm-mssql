@@ -21,7 +21,7 @@ export class Ticket {
     incidencia: string;
 
     @Column({  type: 'nvarchar', nullable: true })
-    comentario: string;
+    comentario?: string;
 
     @Column({ type: 'nvarchar', nullable: false })
     estado: string;

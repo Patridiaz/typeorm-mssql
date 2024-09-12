@@ -19,9 +19,8 @@ export class TicketService {
         private readonly establecimientoRepository: Repository<Establecimiento>,
     ){}
 
-    // La Logica del CRUD para el tickets comienza aqui
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
-      // console.log('Datos recibidos en el backend:', createTicketDto);
+      // Desestructurar los datos del ticket
       const { tipoIncidencia, establecimiento, assignedTo, ...ticketData } = createTicketDto;
     
       // Buscar el usuario que está creando el ticket
@@ -46,7 +45,7 @@ export class TicketService {
         throw new NotFoundException('Establecimiento no encontrado');
       }
     
-      // Asignar técnico solo si el tipo de incidencia es "Informática"
+      // Determinar la asignación del técnico
       if (tipoIncidencia === 'Informatica' && assignedTo) {
         tecnicoUser = await this.userRepository.findOne({ where: { id: assignedTo } });
     
@@ -54,6 +53,15 @@ export class TicketService {
           ticketEstado = 'Asignado';
         } else {
           ticketEstado = 'Técnico por asignar';
+        }
+      } else if (tipoIncidencia === 'Mantencion') {
+        // Buscar al usuario admin_mantencion
+        tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin_mantencion' } });
+    
+        if (tecnicoUser) {
+          ticketEstado = 'Asignado';
+        } else {
+          throw new NotFoundException('Usuario admin_mantencion no encontrado');
         }
       }
     
@@ -69,7 +77,6 @@ export class TicketService {
     
       try {
         const savedTicket = await this.ticketRepository.save(ticket);
-        // console.log('Ticket guardado con éxito:', savedTicket);
         return savedTicket;
       } catch (error) {
         console.error('Error al guardar el ticket:', error);
@@ -100,12 +107,13 @@ export class TicketService {
     
 
     async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<void> {
+      // Buscar el ticket por ID
       const ticket = await this.ticketRepository.findOne({ where: { id } });
       if (!ticket) {
         throw new NotFoundException('Ticket no encontrado');
       }
-  
-      // Actualiza los campos con los datos del DTO
+    
+      // Actualizar los campos con los datos del DTO
       if (updateTicketDto.estado) {
         ticket.estado = updateTicketDto.estado;
       }
@@ -113,15 +121,21 @@ export class TicketService {
         ticket.comentario = updateTicketDto.comentario;
       }
       if (updateTicketDto.assignedTo !== undefined) {
+        // Buscar el usuario técnico por ID
         const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
         if (!user) {
           throw new NotFoundException('Técnico no encontrado');
         }
+        // Asignar el técnico al ticket
         ticket.assignedTo = user;
+        // Cambiar el estado del ticket a 'activo' cuando se asigne un técnico
+        ticket.estado = 'Asignado'; 
       }
-  
+    
+      // Guardar los cambios en el repositorio
       await this.ticketRepository.save(ticket);
     }
+    
     
 
     //Eliminar ticket de la base de datos por ID
@@ -134,24 +148,29 @@ export class TicketService {
     }
 
 
-    //Buscamos el ticket dependiendo el rol de usuario
     async findTickets(user: User): Promise<Ticket[]> {
       const query = this.ticketRepository.createQueryBuilder('ticket');
     
       if (user.rol === 'admin') {
-          return query.getMany(); // Admin puede ver todos los tickets
+        return query.getMany(); // Admin puede ver todos los tickets
       } else if (user.rol === 'user') {
-          return query
-              .where('ticket.createdById = :userId', { userId: user.id })
-              .getMany(); // Usuario puede ver solo sus tickets
+        return query
+          .where('ticket.createdById = :userId', { userId: user.id })
+          .getMany(); // Usuario puede ver solo sus tickets
       } else if (user.rol.startsWith('tecnico_')) {
-          return query
-              .where('ticket.assignedToId = :userId', { userId: user.id })
-              .getMany(); // Técnicos pueden ver solo los tickets asignados a ellos
+        return query
+          .where('ticket.assignedToId = :userId', { userId: user.id })
+          .getMany(); // Técnicos pueden ver solo los tickets asignados a ellos
+      } else if (user.rol === 'admin_mantencion') {
+        return query
+          .where('ticket.assignedToId = :userId', { userId: user.id })
+          .orWhere('ticket.createdById = :userId', { userId: user.id }) // Añadir si admin_mantencion también necesita ver sus propios tickets
+          .getMany(); // admin_mantencion puede ver tickets asignados a él
       } else {
-          throw new Error('Role not recognized');
+        throw new Error('Role not recognized');
       }
     }
+    
     
       // Obtener tickets creados por un usuario específico
   async fetchTicketsByUserId(userId: number): Promise<Ticket[]> {

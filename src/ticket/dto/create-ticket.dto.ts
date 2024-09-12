@@ -35,8 +35,6 @@ export class CreateTicketDto {
   @IsString()
   estado: string;
 
-
-
   @IsNotEmpty()
   @Type(() => Date)
   @IsDate()
