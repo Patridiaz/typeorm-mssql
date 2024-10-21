@@ -47,8 +47,6 @@ export class AuthService {
             email: userData.email,
           },
         });
-
-        console.log('Usuario existente:', existingUser);
     
         if (existingUser) {
           throw new BadRequestException('El correo electrónico ya está en uso.');
@@ -56,7 +54,7 @@ export class AuthService {
     
         // Encriptar la contraseña
         const hashedPassword = bcryptjs.hashSync(password, 10);
-    
+        
         let est = null;
     
         if (establecimiento) {
@@ -75,11 +73,14 @@ export class AuthService {
         const newUser = this.userRepository.create({
           ...userData,
           password: hashedPassword,
-          establecimiento: est, // Asociar el establecimiento si existe
+          establecimiento: est,
         });
     
         // Guardar el nuevo usuario
         await this.userRepository.save(newUser);
+    
+        // Enviar el correo de bienvenida
+        await this.mailService.sendWelcomeEmail(newUser.email, newUser.name);
     
         // Retornar el usuario como una instancia de User
         return plainToInstance(User, newUser);

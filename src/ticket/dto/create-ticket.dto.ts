@@ -11,6 +11,10 @@ export class CreateTicketDto {
   @IsString()
   establecimiento: number;
 
+  @IsOptional()
+  @IsString()
+  subTipoIncidencia?: string;
+
   @IsNotEmpty()
   @IsString()
   tipoIncidencia: string;

@@ -3,9 +3,9 @@ import { IsDate, IsInt, IsNotEmpty, IsOptional, IsString } from "class-validator
 
 export class UpdateTicketDto {
     
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
-  estado: string;
+  estado?: string;
 
   @IsOptional()
   @IsString()

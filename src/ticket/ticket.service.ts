@@ -20,69 +20,85 @@ export class TicketService {
     ){}
 
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
-      // Desestructurar los datos del ticket
-      const { tipoIncidencia, establecimiento, assignedTo, ...ticketData } = createTicketDto;
-    
-      // Buscar el usuario que está creando el ticket
-      const user = await this.userRepository.findOne({
-        where: { id: userId },
-        relations: ['establecimiento'],
-      });
-    
-      if (!user) {
-        throw new ForbiddenException('Usuario no encontrado');
-      }
-    
-      let tecnicoUser = null;
+      const { tipoIncidencia, subTipoIncidencia, establecimiento, ...ticketData } = createTicketDto;
+  
+      const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['establecimiento'] });
+      if (!user) throw new ForbiddenException('Usuario no encontrado');
+  
+      let tecnicoUser: User | null = null;
       let ticketEstado = 'Pendiente'; // Estado por defecto
+  
+      const establecimientoEntity = await this.establecimientoRepository.findOne({ where: { id: establecimiento } });
+      if (!establecimientoEntity) throw new NotFoundException('Establecimiento no encontrado');
+  
+      const adminEstablecimientos = [
+        "Rayito de Luna",
+        "Jorge Inostroza",
+        "Sala Cuna Sol de Huechuraba",
+        "Los Libertadores",
+        "Biblioteca Municipal de Huechuraba", 
+        "Departamento Educacion Municipal"
+    ];
     
-      // Buscar el establecimiento por ID
-      const establecimientoEntity = await this.establecimientoRepository.findOne({
-        where: { id: establecimiento }
-      });
+    // Convertimos a minúsculas y eliminamos espacios adicionales para comparar correctamente
+    const establecimientoNormalizado = establecimientoEntity.name.trim().toLowerCase();
+    const esAdminEstablecimiento = adminEstablecimientos
+        .map(e => e.trim().toLowerCase())
+        .includes(establecimientoNormalizado);
     
-      if (!establecimientoEntity) {
-        throw new NotFoundException('Establecimiento no encontrado');
-      }
-    
-      // Determinar la asignación del técnico
-      if (tipoIncidencia === 'Informatica' && assignedTo) {
-        tecnicoUser = await this.userRepository.findOne({ where: { id: assignedTo } });
-    
-        if (tecnicoUser) {
-          ticketEstado = 'Asignado';
+    if (tipoIncidencia === 'Informatica') {
+        if (esAdminEstablecimiento) {
+            // Asignar al admin si el establecimiento está en la lista
+            tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin' } });
+            if (!tecnicoUser) {
+                console.log('No se encontró un administrador para el establecimiento.');
+            } else {
+                // console.log(`Administrador asignado: ${tecnicoUser.name}`);
+                ticketEstado = 'Asignado';
+            }
         } else {
-          ticketEstado = 'Técnico por asignar';
-        }
+            // Asignar al técnico de informática del establecimiento
+            tecnicoUser = await this.userRepository.findOne({
+                where: {
+                    rol: 'tecnico_informatica',
+                    establecimiento: { id: establecimientoEntity.id }
+                }
+            });
+            if (!tecnicoUser) {
+                console.log('No se encontró un técnico informático para el establecimiento.');
+            } else {
+                // console.log(`Técnico Informático asignado: ${tecnicoUser.name}`);
+                ticketEstado = 'Asignado';
+            }
+        }    
       } else if (tipoIncidencia === 'Mantencion') {
-        // Buscar al usuario admin_mantencion
-        tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin_mantencion' } });
-    
-        if (tecnicoUser) {
-          ticketEstado = 'Asignado';
-        } else {
-          throw new NotFoundException('Usuario admin_mantencion no encontrado');
-        }
+          // Para los tickets de mantención, asignar al admin_mantencion
+          tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin_mantencion' } });
+          if (tecnicoUser) {
+              ticketEstado = 'Asignado';
+          } else {
+              throw new NotFoundException('Administrador de Mantención no encontrado');
+          }
       }
-    
-      // Crear el ticket
+  
       const ticket = this.ticketRepository.create({
-        ...ticketData,
-        tipoIncidencia,
-        createdBy: user,
-        assignedTo: tecnicoUser, // Solo asignar si existe un técnico
-        estado: ticketEstado,
-        establecimiento: establecimientoEntity, // Asignar el establecimiento
+          ...ticketData,
+          tipoIncidencia,
+          subTipoIncidencia,  // Guardar el subtipo si está presente
+          createdBy: user,
+          assignedTo: tecnicoUser,
+          estado: ticketEstado,
+          establecimiento: establecimientoEntity,
       });
-    
+  
       try {
-        const savedTicket = await this.ticketRepository.save(ticket);
-        return savedTicket;
+          return await this.ticketRepository.save(ticket);
       } catch (error) {
-        console.error('Error al guardar el ticket:', error);
-        throw new InternalServerErrorException('Error al guardar el ticket');
+          console.error('Error al guardar el ticket:', error);
+          throw new InternalServerErrorException('Error al guardar el ticket');
       }
-    }
+  }
+  
     
     
 
@@ -106,14 +122,12 @@ export class TicketService {
     }
     
 
-    async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<void> {
-      // Buscar el ticket por ID
+    async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
       const ticket = await this.ticketRepository.findOne({ where: { id } });
       if (!ticket) {
         throw new NotFoundException('Ticket no encontrado');
       }
     
-      // Actualizar los campos con los datos del DTO
       if (updateTicketDto.estado) {
         ticket.estado = updateTicketDto.estado;
       }
@@ -121,21 +135,16 @@ export class TicketService {
         ticket.comentario = updateTicketDto.comentario;
       }
       if (updateTicketDto.assignedTo !== undefined) {
-        // Buscar el usuario técnico por ID
         const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
         if (!user) {
           throw new NotFoundException('Técnico no encontrado');
         }
-        // Asignar el técnico al ticket
         ticket.assignedTo = user;
-        // Cambiar el estado del ticket a 'activo' cuando se asigne un técnico
-        ticket.estado = 'Asignado'; 
       }
     
-      // Guardar los cambios en el repositorio
       await this.ticketRepository.save(ticket);
+      return ticket; // Devolver el ticket actualizado
     }
-    
     
 
     //Eliminar ticket de la base de datos por ID
@@ -172,16 +181,18 @@ export class TicketService {
     }
     
     
-      // Obtener tickets creados por un usuario específico
+  // Obtener tickets creados por un usuario específico
   async fetchTicketsByUserId(userId: number): Promise<Ticket[]> {
     return this.ticketRepository.createQueryBuilder('ticket')
+      .leftJoinAndSelect('ticket.establecimiento', 'establecimiento') // Incluye el establecimiento
       .where('ticket.createdById = :userId', { userId })
       .getMany();
   }
+  
 
   async fetchTicketsByTechnicianId(technicianId: number): Promise<Ticket[]> {
     try {
-      console.log('Technician ID:', technicianId); // Verifica que el ID sea correcto
+      // console.log('Technician ID:', technicianId); // Verifica que el ID sea correcto
       return await this.ticketRepository.createQueryBuilder('ticket')
         .where('ticket.assignedToId = :technicianId', { technicianId })
         .getMany();
@@ -192,7 +203,7 @@ export class TicketService {
   }
   
   
-    // Método para obtener el total de tickets de mantención
+    // Método para obtener el total de tickets
     async countTicketsByType(tipoIncidencia: string): Promise<number> {
       try {
         const count = await this.ticketRepository.count({
@@ -222,4 +233,44 @@ export class TicketService {
         throw new InternalServerErrorException('Error fetching tickets');
     }
 }
+
+async findTicketsByRole(user: User): Promise<Ticket[]> {
+  const query = this.ticketRepository.createQueryBuilder('ticket')
+    .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')  // Trae los datos del técnico asignado
+    .leftJoinAndSelect('ticket.createdBy', 'createdBy')    // Trae los datos del creador del ticket
+    .leftJoinAndSelect('ticket.establecimiento', 'establecimiento'); // Trae el establecimiento del ticket
+
+  try {
+    let tickets: Ticket[];
+
+    if (user.rol === 'admin') {
+      // El administrador puede ver todos los tickets
+      tickets = await query.getMany();
+
+    } else if (user.rol === 'user') {
+      // Los usuarios comunes solo pueden ver los tickets que ellos crearon
+      tickets = await query
+        .where('ticket.createdById = :userId', { userId: user.id })
+        .getMany();
+
+    } else if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
+      // Técnicos informáticos y administradores de mantención pueden ver los tickets creados por ellos o asignados a ellos
+      tickets = await query
+        .where('ticket.assignedToId = :userId', { userId: user.id })  // Tickets asignados
+        .orWhere('ticket.createdById = :userId', { userId: user.id }) // Tickets creados por ellos
+        .getMany();
+
+    } else {
+      throw new ForbiddenException('No tienes permiso para ver tickets');
+    }
+
+    return tickets;
+
+  } catch (error) {
+    console.error('Error fetching tickets by role:', error);
+    throw new InternalServerErrorException('Error fetching tickets by role');
+  }
+}
+
+
 }

@@ -17,8 +17,11 @@ export class Ticket {
     @Column({ type: 'nvarchar', nullable: false })
     anexo: string;
 
-    @Column({  type: 'nvarchar', nullable: false })
+    @Column({  type: 'nvarchar',length: 1000 , nullable: false })
     incidencia: string;
+
+    @Column({  type: 'nvarchar', nullable: true })
+    subTipoIncidencia?: string;
 
     @Column({  type: 'nvarchar', nullable: true })
     comentario?: string;
@@ -35,12 +38,11 @@ export class Ticket {
     @Column({ type: 'datetime2' })
     fecha: Date;
 
-    @ManyToOne(() => User, user => user.createdTickets)
+    @ManyToOne(() => User, user => user.createdTickets, { eager: true })
     createdBy: User;
   
-    @ManyToOne(() => User, { nullable: true })
+    @ManyToOne(() => User, user => user.assignedTickets, { nullable: true, eager: true })
     assignedTo?: User;
-
     
     
   }
