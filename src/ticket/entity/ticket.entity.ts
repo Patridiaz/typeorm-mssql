@@ -1,3 +1,4 @@
+import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/auth/entity/user.entity';
 import { Establecimiento } from 'src/colegio/entity/colegio.entity';
 import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne } from 'typeorm';
@@ -7,6 +8,9 @@ import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne } f
 export class Ticket {
     @PrimaryGeneratedColumn()
     id: number;
+    
+    @Column({ length:9 , nullable:false })
+    codigoIncidencia: string
   
     @Column({  length: 60, nullable: false })
     nombre: string;
@@ -43,6 +47,5 @@ export class Ticket {
   
     @ManyToOne(() => User, user => user.assignedTickets, { nullable: true, eager: true })
     assignedTo?: User;
-    
-    
+
   }

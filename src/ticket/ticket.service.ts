@@ -22,6 +22,9 @@ export class TicketService {
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
       const { tipoIncidencia, subTipoIncidencia, establecimiento, ...ticketData } = createTicketDto;
   
+      // Generar el código de incidencia
+      const codigoIncidencia = await this.generateCodigoIncidencia(tipoIncidencia);
+  
       const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['establecimiento'] });
       if (!user) throw new ForbiddenException('Usuario no encontrado');
   
@@ -32,45 +35,45 @@ export class TicketService {
       if (!establecimientoEntity) throw new NotFoundException('Establecimiento no encontrado');
   
       const adminEstablecimientos = [
-        "Rayito de Luna",
-        "Jorge Inostroza",
-        "Sala Cuna Sol de Huechuraba",
-        "Los Libertadores",
-        "Biblioteca Municipal de Huechuraba", 
-        "Departamento Educacion Municipal"
-    ];
-    
-    // Convertimos a minúsculas y eliminamos espacios adicionales para comparar correctamente
-    const establecimientoNormalizado = establecimientoEntity.name.trim().toLowerCase();
-    const esAdminEstablecimiento = adminEstablecimientos
-        .map(e => e.trim().toLowerCase())
-        .includes(establecimientoNormalizado);
-    
-    if (tipoIncidencia === 'Informatica') {
-        if (esAdminEstablecimiento) {
-            // Asignar al admin si el establecimiento está en la lista
-            tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin' } });
-            if (!tecnicoUser) {
-                console.log('No se encontró un administrador para el establecimiento.');
-            } else {
-                // console.log(`Administrador asignado: ${tecnicoUser.name}`);
-                ticketEstado = 'Asignado';
-            }
-        } else {
-            // Asignar al técnico de informática del establecimiento
-            tecnicoUser = await this.userRepository.findOne({
-                where: {
-                    rol: 'tecnico_informatica',
-                    establecimiento: { id: establecimientoEntity.id }
-                }
-            });
-            if (!tecnicoUser) {
-                console.log('No se encontró un técnico informático para el establecimiento.');
-            } else {
-                // console.log(`Técnico Informático asignado: ${tecnicoUser.name}`);
-                ticketEstado = 'Asignado';
-            }
-        }    
+          "Rayito de Luna",
+          "Jorge Inostroza",
+          "Sala Cuna Sol de Huechuraba",
+          "Los Libertadores",
+          "Biblioteca Municipal de Huechuraba", 
+          "Departamento Educacion Municipal"
+      ];
+      
+      // Convertimos a minúsculas y eliminamos espacios adicionales para comparar correctamente
+      const establecimientoNormalizado = establecimientoEntity.name.trim().toLowerCase();
+      const esAdminEstablecimiento = adminEstablecimientos
+          .map(e => e.trim().toLowerCase())
+          .includes(establecimientoNormalizado);
+  
+      if (tipoIncidencia === 'Informatica') {
+          if (esAdminEstablecimiento) {
+              // Asignar aleatoriamente un administrador si el establecimiento está en la lista
+              const admins = await this.userRepository.find({ where: { rol: 'admin' } });
+              if (admins.length > 0) {
+                  const randomIndex = Math.floor(Math.random() * admins.length);
+                  tecnicoUser = admins[randomIndex];
+                  ticketEstado = 'Asignado';
+              } else {
+                  console.log('No se encontró un administrador para el establecimiento.');
+              }
+          } else {
+              // Asignar al técnico de informática del establecimiento
+              tecnicoUser = await this.userRepository.findOne({
+                  where: {
+                      rol: 'tecnico_informatica',
+                      establecimiento: { id: establecimientoEntity.id }
+                  }
+              });
+              if (!tecnicoUser) {
+                  console.log('No se encontró un técnico informático para el establecimiento.');
+              } else {
+                  ticketEstado = 'Asignado';
+              }
+          }
       } else if (tipoIncidencia === 'Mantencion') {
           // Para los tickets de mantención, asignar al admin_mantencion
           tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin_mantencion' } });
@@ -89,6 +92,7 @@ export class TicketService {
           assignedTo: tecnicoUser,
           estado: ticketEstado,
           establecimiento: establecimientoEntity,
+          codigoIncidencia,
       });
   
       try {
@@ -98,7 +102,6 @@ export class TicketService {
           throw new InternalServerErrorException('Error al guardar el ticket');
       }
   }
-  
     
     
 
@@ -127,13 +130,16 @@ export class TicketService {
       if (!ticket) {
         throw new NotFoundException('Ticket no encontrado');
       }
-    
+  
+      // Actualización de cada campo si se ha proporcionado un valor
       if (updateTicketDto.estado) {
         ticket.estado = updateTicketDto.estado;
       }
+  
       if (updateTicketDto.comentario) {
         ticket.comentario = updateTicketDto.comentario;
       }
+  
       if (updateTicketDto.assignedTo !== undefined) {
         const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
         if (!user) {
@@ -141,11 +147,45 @@ export class TicketService {
         }
         ticket.assignedTo = user;
       }
-    
+  
+      if (updateTicketDto.nombre) {
+        ticket.nombre = updateTicketDto.nombre;
+      }
+  
+      if (updateTicketDto.establecimiento) {
+        ticket.establecimiento.id = updateTicketDto.establecimiento;
+      }
+  
+      if (updateTicketDto.subTipoIncidencia) {
+        ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;
+      }
+  
+      if (updateTicketDto.tipoIncidencia) {
+        ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;
+      }
+  
+      if (updateTicketDto.email) {
+        ticket.email = updateTicketDto.email;
+      }
+  
+      if (updateTicketDto.anexo) {
+        ticket.anexo = updateTicketDto.anexo;
+      }
+  
+      if (updateTicketDto.incidencia) {
+        ticket.incidencia = updateTicketDto.incidencia;
+      }
+  
+      if (updateTicketDto.fecha) {
+        ticket.fecha = updateTicketDto.fecha;
+      }
+  
+      // Guardar el ticket actualizado
       await this.ticketRepository.save(ticket);
+  
       return ticket; // Devolver el ticket actualizado
     }
-    
+  
 
     //Eliminar ticket de la base de datos por ID
     async removeTicket(id:string){
@@ -272,5 +312,29 @@ async findTicketsByRole(user: User): Promise<Ticket[]> {
   }
 }
 
+
+
+// Lógica para generar el código de incidencia
+private async generateCodigoIncidencia(tipoIncidencia: string): Promise<string> {
+  let prefix = '';
+
+  // Definir el prefijo basado en el tipo de incidencia
+  if (tipoIncidencia === 'Informatica') {
+    prefix = 'INFO';
+  } else if (tipoIncidencia === 'Mantencion') {
+    prefix = 'MANT';
+  }
+
+  // Contar los tickets existentes de ese tipo
+  const count = await this.ticketRepository.count({
+    where: { tipoIncidencia },
+  });
+
+  // Incrementar el número de ticket para ese tipo
+  const increment = count + 1;
+
+  // Formatear el código con ceros a la izquierda, por ejemplo: INF-01
+  return `${prefix}-${increment.toString().padStart(4, '000')}`;
+}
 
 }

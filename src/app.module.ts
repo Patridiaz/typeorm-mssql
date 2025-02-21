@@ -15,6 +15,10 @@ import { TipoTicket } from './ticket-type/entity/tipo-ticket.entity';
 import { RecoveryToken } from './auth/entity/recovery-token.entity';
 import { MailService } from './auth/mail.service';
 import { RolUserModule } from './rol-user/rol-user.module';
+import { InventoryItem } from './inventario/entity/inventario.entity';
+import { InventoryModule } from './inventario/inventario.module';
+import { TipoDispositivo } from './tipo-dispositivo/entity/tipo-dispositivo.entity';
+import { TipoDispositivoModule } from './tipo-dispositivo/tipo-dispositivo.module';
 
 @Module({
   imports: [
@@ -37,7 +41,23 @@ import { RolUserModule } from './rol-user/rol-user.module';
       entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken],
     }),
 
-   
+    // Segunda conexión (para inventario)
+    TypeOrmModule.forRoot({
+      name: 'inventoryConnection', // nombre de conexión único
+      type: 'mssql',
+      host: process.env.INVENTORY_DB_HOST || process.env.DB_HOST,
+      port: parseInt(process.env.INVENTORY_DB_PORT, 10) || 1432,
+      username: process.env.INVENTORY_DB_USER || process.env.DB_USER,
+      password: process.env.INVENTORY_DB_PASS || process.env.DB_PASS,
+      database: process.env.INVENTORY_DB_NAME || process.env.DB_NAME,
+      options: {
+        instanceName: 'SQLEXPRESS',
+        encrypt: false,
+        trustServerCertificate: false,
+      },
+      synchronize: true,
+      entities: [InventoryItem,TipoDispositivo], // solo entidades de inventario
+    }),
 
     TypeOrmModule.forFeature([User,RecoveryToken]),
     TicketModule,
@@ -45,11 +65,11 @@ import { RolUserModule } from './rol-user/rol-user.module';
     EstablecimientoModule,
     TicketTypeModule,
     RolUserModule,
-    
+    InventoryModule,
+    TipoDispositivoModule, // módulo de inventario   
   ],
   controllers:[AuthController],
   providers:[AuthService,MailService ]
 })
 export class AppModule {
-  
 }

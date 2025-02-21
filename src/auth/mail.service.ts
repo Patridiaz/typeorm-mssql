@@ -11,7 +11,7 @@ export class MailService {
       service: 'gmail', // o el servicio de correo que estés usando
       auth: {
         user: 'tickets@eduhuechuraba.cl',
-        pass: 'tiar egdo qrva fxpg'
+        pass: 'xskg ibzg wubi mcqa'
       }
     });
   }
@@ -36,10 +36,10 @@ async sendTicketCreationEmail(to: string, ticket: any): Promise<void> {
   await this.transporter.sendMail({
     from: 'no-reply@tudominio.com',
     to,
-    subject: `Has creado un Ticket Nº ${ticket.id}`,
+    subject: `Has creado un Ticket Nº ${ticket.codigoIncidencia}`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd;">
-        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">Has creado un Ticket Nº ${ticket.id}</h2>
+        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">Detalle del Ticket Nº ${ticket.codigoIncidencia}</h2>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="background-color: #f7f7f7; padding: 10px; border: 1px solid #ddd;"><strong>Establecimiento:</strong></td>
@@ -69,22 +69,7 @@ async sendTicketCreationEmail(to: string, ticket: any): Promise<void> {
             <td style="background-color: #f7f7f7; padding: 10px; border: 1px solid #ddd;"><strong>Estado:</strong></td>
             <td style="padding: 10px; border: 1px solid #ddd;"><span style="background-color: ${ticket.estado === 'Resuelto' ? '#4CAF50' : '#2da73d'}; color: white; padding: 5px 10px; border-radius: 5px;">${ticket.estado}</span></td>
           </tr>
-          <tr>
-            <td style="background-color: #f7f7f7; padding: 10px; border: 1px solid #ddd;"><strong>Comentario:</strong></td>
-            <td style="padding: 10px; border: 1px solid #ddd;">${ticket.comentario}</td>
-          </tr>
         </table>
-
-        <div style="background-color: #f7f7f7; padding: 20px; border-top: 1px solid #ddd;">
-          <h3>Contacto</h3>
-          <p><strong>Nombre:</strong> ${ticket.nombre}</p>
-          <p><strong>Establecimiento:</strong> ${ticket.establecimiento?.name}</p>
-          <p><strong>Anexo:</strong> ${ticket.anexo}</p>
-        </div>
-        <div style="padding: 20px; text-align: center; font-size: 12px; color: #777;">
-          Este es un correo automático, por favor no responda a este mensaje.
-        </div>
-      </div>
     `
   });
 }
@@ -93,10 +78,10 @@ async sendTicketAssignedEmail(to: string, ticket: any): Promise<void> {
   await this.transporter.sendMail({
     from: 'no-reply@tudominio.com',
     to,
-    subject: `Se te ha asignado un Ticket Nº ${ticket.id}`,
+    subject: `Se te ha asignado un Ticket Nº ${ticket.codigoIncidencia}`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd;">
-        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">Se te ha asignado un Ticket Nº ${ticket.id}</h2>
+        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">Se te ha asignado un Ticket Nº ${ticket.codigoIncidencia}</h2>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="background-color: #f7f7f7; padding: 10px; border: 1px solid #ddd;"><strong>Establecimiento:</strong></td>
@@ -150,10 +135,10 @@ async sendTicketUpdateEmail(to: string, ticket: any): Promise<void> {
   await this.transporter.sendMail({
     from: 'no-reply@tudominio.com',
     to,
-    subject: `El Ticket Nº ${ticket.id} ha sido actualizado`,
+    subject: `El Ticket Nº ${ticket.codigoIncidencia} ha sido actualizado`,
     html: ` 
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd;">
-        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">El Ticket Nº ${ticket.id} ha sido actualizado</h2>
+        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">El Ticket Nº ${ticket.codigoIncidencia} ha sido actualizado</h2>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="background-color: #f7f7f7; padding: 10px; border: 1px solid #ddd;"><strong>Establecimiento:</strong></td>
@@ -189,12 +174,7 @@ async sendTicketUpdateEmail(to: string, ticket: any): Promise<void> {
           </tr>
         </table>
 
-        <div style="background-color: #f7f7f7; padding: 20px; border-top: 1px solid #ddd;">
-          <h3>Contacto</h3>
-          <p><strong>Nombre:</strong> ${ticket.nombre}</p>
-          <p><strong>Establecimiento:</strong> ${ticket.establecimiento?.name}</p>
-          <p><strong>Anexo:</strong> ${ticket.anexo}</p>
-        </div>
+
         <div style="padding: 20px; text-align: center; font-size: 12px; color: #777;">
           Este es un correo automático, por favor no responda a este mensaje.
         </div>
@@ -208,10 +188,10 @@ async sendTicketDetailsEmail(to: string, ticket: any): Promise<void> {
   await this.transporter.sendMail({
     from: 'no-reply@tudominio.com',
     to,
-    subject: `Detalles del Ticket Nº ${ticket.id}`,
+    subject: `Detalles del Ticket Nº ${ticket.codigoIncidencia}`,
     html: `
       <div style="font-family: Arial, sans-serif; color: #333; max-width: 600px; margin: auto; border: 1px solid #ddd;">
-        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">Detalles del Ticket Nº ${ticket.id}</h2>
+        <h2 style="background-color: #f7f7f7; color: #333; padding: 20px; border-bottom: 1px solid #ddd; text-align: center;">Detalles del Ticket Nº ${ticket.codigoIncidencia}</h2>
         <table style="width: 100%; border-collapse: collapse; margin: 20px 0;">
           <tr>
             <td style="background-color: #f7f7f7; padding: 10px; border: 1px solid #ddd;"><strong>Establecimiento:</strong></td>
@@ -274,7 +254,7 @@ async sendWelcomeEmail(to: string, userName: string): Promise<void> {
           Gracias por registrarte en Ticket Eduhuechuraba. Tu cuenta ha sido creada con éxito.
         </p>
         <p style="padding: 10px; border: 1px solid #ddd;">
-          Puedes iniciar sesión y empezar a crear tickets para tus necesidades.
+          Puedes iniciar sesión y empezar a crear tickets <p><a href="https://www.tickets.eduhuechuraba.cl/" style="color: #2da73d; text-decoration: none; align-items:center">Haz clic aquí</a> para iniciar sesión.</p>.  
         </p>
         <div style="padding: 20px; text-align: center; font-size: 12px; color: #777;">
           Este es un correo automático, por favor no responda a este mensaje.

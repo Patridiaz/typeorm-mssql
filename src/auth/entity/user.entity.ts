@@ -3,6 +3,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToOne, JoinColum
 import { RecoveryToken } from "./recovery-token.entity";
 import { Ticket } from "src/ticket/entity/ticket.entity";
 import { Establecimiento } from "src/colegio/entity/colegio.entity";
+import { InventoryItem } from "src/inventario/entity/inventario.entity";
 
 @Entity('user')
 export class User {
@@ -36,6 +37,9 @@ export class User {
 
   @OneToMany(() => Ticket, ticket => ticket.assignedTo)
   assignedTickets: Ticket[];
+
+
+  
 
   toJSON() {
     // Personaliza la conversión a JSON

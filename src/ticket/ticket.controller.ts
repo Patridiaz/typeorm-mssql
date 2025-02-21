@@ -105,7 +105,7 @@ export class TicketController {
     
     // Enviar correo al usuario que creó el ticket
     const recipientEmail = createTicketDto.email;
-    await this.mailService.sendTicketDetailsEmail(recipientEmail, createdTicket);
+    await this.mailService.sendTicketCreationEmail(recipientEmail, createdTicket);
   
     // Enviar correo al técnico asignado
     if (createdTicket.assignedTo && createdTicket.assignedTo.email) {
@@ -141,7 +141,15 @@ export class TicketController {
           // Limita los campos que pueden ser actualizados
           updateTicketDto = {
             estado: updateTicketDto.estado,       // Permitir actualizar solo el estado
-            comentario: updateTicketDto.comentario // Permitir actualizar el comentario
+            comentario: updateTicketDto.comentario, // Permitir actualizar el comentario
+            nombre: updateTicketDto.nombre,// Permitir actualizar el comentario
+            establecimiento: updateTicketDto.establecimiento, // Permitir actualizar el comentario
+            subTipoIncidencia: updateTicketDto.subTipoIncidencia, // Permitir actualizar el comentario
+            tipoIncidencia: updateTicketDto.tipoIncidencia, // Permitir actualizar el comentario
+            email : updateTicketDto.email , // Permitir actualizar el comentario
+            anexo  : updateTicketDto.anexo  , // Permitir actualizar el comentario
+            incidencia : updateTicketDto.incidencia , // Permitir actualizar el comentario
+            assignedTo : updateTicketDto.assignedTo,
           };
         }
       
@@ -154,6 +162,12 @@ export class TicketController {
         // Enviar correo al creador del ticket sobre la actualización
         const recipientEmail = updatedTicket.email; // Suponiendo que el campo `email` en el ticket contiene el correo del creador
         await this.mailService.sendTicketUpdateEmail(recipientEmail, updatedTicket);
+        
+          // Enviar correo al técnico asignado si existe
+        const technicianEmail = updatedTicket.assignedTo?.email; // Suponiendo que assignedTo tiene un campo email
+        if (technicianEmail) {
+          await this.mailService.sendTicketUpdateEmail(technicianEmail, updatedTicket);
+        }
       
         return { message: 'Ticket actualizado correctamente', id };
       }
