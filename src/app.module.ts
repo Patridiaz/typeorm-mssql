@@ -33,9 +33,8 @@ import { TipoDispositivoModule } from './tipo-dispositivo/tipo-dispositivo.modul
       password: process.env.DB_PASS,
       database: process.env.DB_NAME,
       options: {
-        instanceName: 'SQLEXPRESS',
         encrypt: false,
-        trustServerCertificate: false,
+        trustServerCertificate: true,
       },
       synchronize: true,
       entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken],
@@ -51,9 +50,8 @@ import { TipoDispositivoModule } from './tipo-dispositivo/tipo-dispositivo.modul
       password: process.env.INVENTORY_DB_PASS || process.env.DB_PASS,
       database: process.env.INVENTORY_DB_NAME || process.env.DB_NAME,
       options: {
-        instanceName: 'SQLEXPRESS',
         encrypt: false,
-        trustServerCertificate: false,
+        trustServerCertificate: true,
       },
       synchronize: true,
       entities: [InventoryItem,TipoDispositivo], // solo entidades de inventario
