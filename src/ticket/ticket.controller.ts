@@ -198,7 +198,7 @@ export class TicketController {
       throw new NotFoundException('Archivo no encontrado');
     }
 
-      const baseUrl = 'http://127.0.0.1:10000';
+      const baseUrl = 'https://typeorm-mssql.onrender.com';
     return {
       filename: file.filename,
       url: `${baseUrl}/uploads/${file.filename}`
