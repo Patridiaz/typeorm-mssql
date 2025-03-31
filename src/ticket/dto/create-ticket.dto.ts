@@ -23,7 +23,7 @@ export class CreateTicketDto {
   @IsString()
   email: string;
 
-  @IsNotEmpty()
+  @IsOptional()
   @IsString()
   anexo: string;
 

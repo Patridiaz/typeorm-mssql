@@ -7,9 +7,10 @@ import { AuthModule } from 'src/auth/auth.module';
 import { User } from 'src/auth/entity/user.entity';
 import { TipoTicket } from 'src/ticket-type/entity/tipo-ticket.entity';
 import { MailService } from 'src/auth/mail.service';
+import { FileEntity } from './entity/fileTicket.entity';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([Ticket,User,TipoTicket,MailService]),
+  imports:[TypeOrmModule.forFeature([Ticket,User,TipoTicket,MailService,FileEntity]),
   AuthModule
 ],
   providers: [TicketService],

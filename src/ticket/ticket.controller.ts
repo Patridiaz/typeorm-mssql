@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, InternalServerErrorException, NotFoundException, Param, Post, Put, Query, Req, Res, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, InternalServerErrorException, NotFoundException, Param, Post, Put, Query, Req, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { TicketService } from './ticket.service';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { Ticket } from './entity/ticket.entity';
@@ -8,6 +8,9 @@ import { User } from 'src/auth/entity/user.entity';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { Response } from 'express';
 import { MailService } from 'src/auth/mail.service';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
 @Controller('ticket')
 @UseGuards(AuthGuard) // Aplicar el AuthGuard a todas las rutas en este controlador
@@ -116,63 +119,152 @@ export class TicketController {
     return createdTicket;
   }
 
-      // Actualiza un ticket por ID
-      @Put('/:id')
-      async updateTicket(
-        @Param('id') id: number,
-        @Body() updateTicketDto: UpdateTicketDto,
-        @Req() req: Request
-      ) {
-        const user = req['user'];
+  @Put('/:id')
+  @UseInterceptors(
+    FileInterceptor('file', {
+      storage: diskStorage({
+        destination: './uploads',
+        filename: (req, file, cb) => {
+          const ticketId = req.params.id;
+          const fileExt = extname(file.originalname);
+          cb(null, `${ticketId}${fileExt}`); // Guardar archivo con ID del ticket
+        },
+      }),
+    }),
+  )
+  async updateTicket(
+    @Param('id') id: number,
+    @Body() updateTicketDto: UpdateTicketDto,
+    @Req() req: Request,
+    @UploadedFile() file?: Express.Multer.File, // Recibir archivo opcionalmente
+  ) {
+    const user = req['user'];
+
+    // Verificar permisos
+    if (!['admin', 'tecnico_informatica', 'admin_mantencion'].includes(user.rol)) {
+      throw new ForbiddenException('No tienes permiso para actualizar el ticket');
+    }
+
+    // Verificar si el ticket existe
+    const ticket = await this.ticketService.fetchTicketById(id);
+    if (!ticket) {
+      throw new NotFoundException('Ticket no encontrado');
+    }
+
+    // Si el usuario es técnico o admin de mantención, limitar los campos que puede actualizar
+    if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
+      updateTicketDto = {
+        estado: updateTicketDto.estado,
+        comentario: updateTicketDto.comentario,
+        nombre: updateTicketDto.nombre,
+        establecimiento: updateTicketDto.establecimiento,
+        subTipoIncidencia: updateTicketDto.subTipoIncidencia,
+        tipoIncidencia: updateTicketDto.tipoIncidencia,
+        email: updateTicketDto.email,
+        incidencia: updateTicketDto.incidencia,
+        assignedTo: updateTicketDto.assignedTo,
+      };
+    }
+
+    // Llamar al servicio para actualizar el ticket y adjuntar el archivo
+    await this.ticketService.updateTicket(id, updateTicketDto, file);
+
+      // 🔹 Si hay un archivo, guardarlo en la base de datos
+    if (file) {
+      await this.ticketService.saveFileToTicket(id, file);
+    }
+
+    // Recuperar el ticket actualizado
+    const updatedTicket = await this.ticketService.fetchTicketById(id);
+
+    // Enviar correo al creador del ticket
+    const recipientEmail = updatedTicket.email;
+    await this.mailService.sendTicketUpdateEmail(recipientEmail, updatedTicket);
+
+    // Enviar correo al técnico asignado si existe
+    const technicianEmail = updatedTicket.assignedTo?.email;
+    if (technicianEmail) {
+      await this.mailService.sendTicketUpdateEmail(technicianEmail, updatedTicket);
+    }
+
+    return { message: 'Ticket actualizado correctamente', id };
+  }
+
+  @Get('file/:ticketId')
+  async getFile(@Param('ticketId') ticketId: number) {
+    const file = await this.ticketService.fetchTicketFileById(ticketId);
+
+    if (!file) {
+      throw new NotFoundException('Archivo no encontrado');
+    }
+
+      const baseUrl = 'http://127.0.0.1:4000';
+    return {
+      filename: file.filename,
+      url: `${baseUrl}/uploads/${file.filename}`
+    };
+  }
+
+  
+      // // Actualiza un ticket por ID
+      // @Put('/:id')
+      // async updateTicket(
+      //   @Param('id') id: number,
+      //   @Body() updateTicketDto: UpdateTicketDto,
+      //   @Req() req: Request
+      // ) {
+      //   const user = req['user'];
       
-        // Verifica que el usuario tenga el rol adecuado
-        if (!['admin', 'tecnico_informatica', 'admin_mantencion'].includes(user.rol)) {
-          throw new ForbiddenException('No tienes permiso para actualizar la información del ticket');
-        }
+      //   // Verifica que el usuario tenga el rol adecuado
+      //   if (!['admin', 'tecnico_informatica', 'admin_mantencion'].includes(user.rol)) {
+      //     throw new ForbiddenException('No tienes permiso para actualizar la información del ticket');
+      //   }
       
-        // Verifica si el ticket existe
-        const ticket = await this.ticketService.fetchTicketById(id);
-        if (!ticket) {
-          throw new NotFoundException('Ticket no encontrado');
-        }
+      //   // Verifica si el ticket existe
+      //   const ticket = await this.ticketService.fetchTicketById(id);
+      //   if (!ticket) {
+      //     throw new NotFoundException('Ticket no encontrado');
+      //   }
       
-        // Solo permite ciertas actualizaciones si el rol es tecnico_informatica o admin_mantencion
-        if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
-          // Limita los campos que pueden ser actualizados
-          updateTicketDto = {
-            estado: updateTicketDto.estado,       // Permitir actualizar solo el estado
-            comentario: updateTicketDto.comentario, // Permitir actualizar el comentario
-            nombre: updateTicketDto.nombre,// Permitir actualizar el comentario
-            establecimiento: updateTicketDto.establecimiento, // Permitir actualizar el comentario
-            subTipoIncidencia: updateTicketDto.subTipoIncidencia, // Permitir actualizar el comentario
-            tipoIncidencia: updateTicketDto.tipoIncidencia, // Permitir actualizar el comentario
-            email : updateTicketDto.email , // Permitir actualizar el comentario
-            anexo  : updateTicketDto.anexo  , // Permitir actualizar el comentario
-            incidencia : updateTicketDto.incidencia , // Permitir actualizar el comentario
-            assignedTo : updateTicketDto.assignedTo,
-          };
-        }
+      //   // Solo permite ciertas actualizaciones si el rol es tecnico_informatica o admin_mantencion
+      //   if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
+      //     // Limita los campos que pueden ser actualizados
+      //     updateTicketDto = {
+      //       estado: updateTicketDto.estado,       // Permitir actualizar solo el estado
+      //       comentario: updateTicketDto.comentario, // Permitir actualizar el comentario
+      //       nombre: updateTicketDto.nombre,// Permitir actualizar el comentario
+      //       establecimiento: updateTicketDto.establecimiento, // Permitir actualizar el comentario
+      //       subTipoIncidencia: updateTicketDto.subTipoIncidencia, // Permitir actualizar el comentario
+      //       tipoIncidencia: updateTicketDto.tipoIncidencia, // Permitir actualizar el comentario
+      //       email : updateTicketDto.email , // Permitir actualizar el comentario
+      //       anexo  : updateTicketDto.anexo  , // Permitir actualizar el comentario
+      //       incidencia : updateTicketDto.incidencia , // Permitir actualizar el comentario
+      //       assignedTo : updateTicketDto.assignedTo,
+      //     };
+      //   }
       
-        // Actualiza el ticket con los datos del DTO
-        await this.ticketService.updateTicket(id, updateTicketDto);
+      //   // Actualiza el ticket con los datos del DTO
+      //   await this.ticketService.updateTicket(id, updateTicketDto);
       
-        // Recupera el ticket actualizado para enviar la información correcta en el correo
-        const updatedTicket = await this.ticketService.fetchTicketById(id);
+      //   // Recupera el ticket actualizado para enviar la información correcta en el correo
+      //   const updatedTicket = await this.ticketService.fetchTicketById(id);
       
-        // Enviar correo al creador del ticket sobre la actualización
-        const recipientEmail = updatedTicket.email; // Suponiendo que el campo `email` en el ticket contiene el correo del creador
-        await this.mailService.sendTicketUpdateEmail(recipientEmail, updatedTicket);
+      //   // Enviar correo al creador del ticket sobre la actualización
+      //   const recipientEmail = updatedTicket.email; // Suponiendo que el campo `email` en el ticket contiene el correo del creador
+      //   await this.mailService.sendTicketUpdateEmail(recipientEmail, updatedTicket);
         
-          // Enviar correo al técnico asignado si existe
-        const technicianEmail = updatedTicket.assignedTo?.email; // Suponiendo que assignedTo tiene un campo email
-        if (technicianEmail) {
-          await this.mailService.sendTicketUpdateEmail(technicianEmail, updatedTicket);
-        }
+      //     // Enviar correo al técnico asignado si existe
+      //   const technicianEmail = updatedTicket.assignedTo?.email; // Suponiendo que assignedTo tiene un campo email
+      //   if (technicianEmail) {
+      //     await this.mailService.sendTicketUpdateEmail(technicianEmail, updatedTicket);
+      //   }
       
-        return { message: 'Ticket actualizado correctamente', id };
-      }
+      //   return { message: 'Ticket actualizado correctamente', id };
+      // }
 
      
   }
+
+
 
 

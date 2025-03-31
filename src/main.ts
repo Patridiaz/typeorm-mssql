@@ -2,12 +2,19 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ValidationPipe } from '@nestjs/common';
 import * as dotenv from 'dotenv';
+import { join } from 'path';
+import { NestExpressApplication } from '@nestjs/platform-express';
 
 dotenv.config(); // Cargar variables de entorno desde .env
 
 async function bootstrap() {
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
   
+  // Configuración para servir archivos estáticos desde la carpeta 'uploads'
+  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+    prefix: '/uploads', // Prefix para acceder a los archivos
+  });
+
   app.enableCors({});
   
   app.useGlobalPipes(

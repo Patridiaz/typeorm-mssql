@@ -1,7 +1,8 @@
 import { InjectRepository } from '@nestjs/typeorm';
 import { User } from 'src/auth/entity/user.entity';
 import { Establecimiento } from 'src/colegio/entity/colegio.entity';
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne, OneToMany } from 'typeorm';
+import { FileEntity } from './fileTicket.entity';
 
 @Entity('ticket') //This maps the notes entity to the 'ticket' table in your DB
 
@@ -18,7 +19,7 @@ export class Ticket {
     @Column({  length: 160, nullable: false })
     email: string;
   
-    @Column({ type: 'nvarchar', nullable: false })
+    @Column({ type: 'nvarchar', nullable: true })
     anexo: string;
 
     @Column({  type: 'nvarchar',length: 1000 , nullable: false })
@@ -48,4 +49,7 @@ export class Ticket {
     @ManyToOne(() => User, user => user.assignedTickets, { nullable: true, eager: true })
     assignedTo?: User;
 
+    @ManyToOne(() => FileEntity, (file) => file.ticket, { cascade: true })
+    file: FileEntity;
+    
   }

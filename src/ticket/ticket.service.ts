@@ -6,6 +6,11 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { User } from 'src/auth/entity/user.entity';
 import { Establecimiento } from 'src/colegio/entity/colegio.entity';
+import { FileEntity } from './entity/fileTicket.entity';
+import { extname, join } from 'path';
+import { existsSync } from 'fs';
+import { unlink, writeFile } from 'fs/promises';
+import { Multer } from 'multer';
 
 @Injectable()
 export class TicketService {
@@ -17,6 +22,8 @@ export class TicketService {
         private readonly userRepository: Repository<User>,
         @InjectRepository(Establecimiento)
         private readonly establecimientoRepository: Repository<Establecimiento>,
+        @InjectRepository(FileEntity)
+        private readonly fileRepository:Repository<FileEntity>
     ){}
 
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
@@ -123,23 +130,43 @@ export class TicketService {
         throw new InternalServerErrorException('Error fetching ticket by ID');
       }
     }
+
+    async fetchTicketFileById(id: number): Promise<{ filename: string; path: string } | null> {
+      try {
+        const ticket = await this.ticketRepository.createQueryBuilder('ticket')
+          .leftJoinAndSelect('ticket.file', 'file') // Solo unimos la relación con el archivo
+          .where('ticket.id = :id', { id })
+          .getOne();
+    
+        if (!ticket || !ticket.file) return null;
+    
+        return { filename: ticket.file.filename, path: ticket.file.path };
+      } catch (error) {
+        console.error('Error fetching file by ticket ID:', error);
+        throw new InternalServerErrorException('Error fetching file');
+      }
+    }
     
 
-    async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
-      const ticket = await this.ticketRepository.findOne({ where: { id } });
+    async updateTicket(
+      id: number,
+      updateTicketDto: UpdateTicketDto,
+      file?: Express.Multer.File,
+    ): Promise<Ticket> {
+      const ticket = await this.ticketRepository.findOne({
+        where: { id },
+        relations: ['file'], // Cargar la relación con archivos
+      });
+    
       if (!ticket) {
         throw new NotFoundException('Ticket no encontrado');
       }
-  
-      // Actualización de cada campo si se ha proporcionado un valor
-      if (updateTicketDto.estado) {
-        ticket.estado = updateTicketDto.estado;
-      }
-  
-      if (updateTicketDto.comentario) {
-        ticket.comentario = updateTicketDto.comentario;
-      }
-  
+    
+      // Actualizar campos si existen en la solicitud
+      const codigoIncidenciaOriginal = ticket.codigoIncidencia;
+
+      if (updateTicketDto.estado) ticket.estado = updateTicketDto.estado;
+      if (updateTicketDto.comentario) ticket.comentario = updateTicketDto.comentario;
       if (updateTicketDto.assignedTo !== undefined) {
         const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
         if (!user) {
@@ -147,44 +174,114 @@ export class TicketService {
         }
         ticket.assignedTo = user;
       }
-  
-      if (updateTicketDto.nombre) {
-        ticket.nombre = updateTicketDto.nombre;
+      if (updateTicketDto.nombre) ticket.nombre = updateTicketDto.nombre;
+      if (updateTicketDto.establecimiento) ticket.establecimiento.id = updateTicketDto.establecimiento;
+      if (updateTicketDto.subTipoIncidencia) ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;
+      if (updateTicketDto.tipoIncidencia) ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;
+      if (updateTicketDto.email) ticket.email = updateTicketDto.email;
+      if (updateTicketDto.incidencia) ticket.incidencia = updateTicketDto.incidencia;
+      if (updateTicketDto.fecha) ticket.fecha = updateTicketDto.fecha;
+    
+      ticket.codigoIncidencia = codigoIncidenciaOriginal;
+
+      if (file && file.buffer) {
+        const uploadDir = './uploads';
+        const fileExt = extname(file.originalname);
+        const newFileName = `${id}${fileExt}`;
+        const filePath = join(uploadDir, newFileName);
+    
+      // Si el ticket ya tenía un archivo, eliminarlo antes de guardar el nuevo
+      if (ticket.file) {
+
+        const oldFilePath = join(uploadDir, ticket.file?.filename);
+        if (existsSync(oldFilePath)) {
+          await unlink(oldFilePath); // Eliminar el archivo físico
+        }
+
+        await this.fileRepository.delete(ticket.file?.id); // Eliminar el archivo de la base de datos
       }
-  
-      if (updateTicketDto.establecimiento) {
-        ticket.establecimiento.id = updateTicketDto.establecimiento;
+    
+        // Guardar el nuevo archivo
+        await writeFile(filePath, file.buffer);
+    
+        // Crear la nueva entidad de archivo
+        const newFile = this.fileRepository.create({
+            filename: newFileName,
+            path: filePath,
+            mimetype: file.mimetype,
+            size: file.size,
+        });
+    
+        await this.fileRepository.save(newFile);
+    
+        // Asociar el nuevo archivo al ticket
+        ticket.file = newFile;
       }
-  
-      if (updateTicketDto.subTipoIncidencia) {
-        ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;
-      }
-  
-      if (updateTicketDto.tipoIncidencia) {
-        ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;
-      }
-  
-      if (updateTicketDto.email) {
-        ticket.email = updateTicketDto.email;
-      }
-  
-      if (updateTicketDto.anexo) {
-        ticket.anexo = updateTicketDto.anexo;
-      }
-  
-      if (updateTicketDto.incidencia) {
-        ticket.incidencia = updateTicketDto.incidencia;
-      }
-  
-      if (updateTicketDto.fecha) {
-        ticket.fecha = updateTicketDto.fecha;
-      }
-  
-      // Guardar el ticket actualizado
+    
       await this.ticketRepository.save(ticket);
-  
-      return ticket; // Devolver el ticket actualizado
+      return ticket;
     }
+    
+    async saveFileToTicket(ticketId: number, file: Express.Multer.File) {
+      const ticket = await this.ticketRepository.findOne({
+        where: { id: ticketId },
+        relations: ['file'],
+      });
+    
+      if (!ticket) {
+        throw new NotFoundException('Ticket no encontrado');
+      }
+    
+      // Guardar nueva referencia en la base de datos
+      const newFile = this.fileRepository.create({
+        filename: file.filename,
+        path: file.path,
+        mimetype: file.mimetype,
+        size: file.size,
+      });
+    
+      await this.fileRepository.save(newFile);
+    
+      // Asociar el nuevo archivo al ticket
+      ticket.file = newFile;
+      await this.ticketRepository.save(ticket);
+    }
+
+    
+
+
+    // async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
+    //   const ticket = await this.ticketRepository.findOne({ where: { id } });
+
+    //   if (!ticket) {
+    //     throw new NotFoundException('Ticket no encontrado');
+    //   }
+  
+    //   // Actualización de cada campo si se ha proporcionado un valor
+    //   if (updateTicketDto.estado) { ticket.estado = updateTicketDto.estado;} 
+    //   if (updateTicketDto.comentario) { ticket.comentario = updateTicketDto.comentario;}
+    //   if (updateTicketDto.assignedTo !== undefined) { const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
+    //     if (!user) {
+    //       throw new NotFoundException('Técnico no encontrado');
+    //     }
+    //     ticket.assignedTo = user;
+    //   }
+  
+    //   if (updateTicketDto.nombre) { ticket.nombre = updateTicketDto.nombre;}
+    //   if (updateTicketDto.establecimiento) { ticket.establecimiento.id = updateTicketDto.establecimiento;}
+    //   if (updateTicketDto.subTipoIncidencia) { ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;}
+    //   if (updateTicketDto.tipoIncidencia) { ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;}
+    //   if (updateTicketDto.email) { ticket.email = updateTicketDto.email;}
+    //   if (updateTicketDto.anexo) { ticket.anexo = updateTicketDto.anexo;}
+    //   if (updateTicketDto.incidencia) { ticket.incidencia = updateTicketDto.incidencia;}
+    //   if (updateTicketDto.fecha) {ticket.fecha = updateTicketDto.fecha;
+    //   }
+  
+    //   // Guardar el ticket actualizado
+    //   await this.ticketRepository.save(ticket);
+  
+    //   return ticket; // Devolver el ticket actualizado
+    // }
   
 
     //Eliminar ticket de la base de datos por ID

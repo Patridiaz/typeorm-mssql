@@ -19,6 +19,7 @@ import { InventoryItem } from './inventario/entity/inventario.entity';
 import { InventoryModule } from './inventario/inventario.module';
 import { TipoDispositivo } from './tipo-dispositivo/entity/tipo-dispositivo.entity';
 import { TipoDispositivoModule } from './tipo-dispositivo/tipo-dispositivo.module';
+import { FileEntity } from './ticket/entity/fileTicket.entity';
 
 @Module({
   imports: [
@@ -37,7 +38,7 @@ import { TipoDispositivoModule } from './tipo-dispositivo/tipo-dispositivo.modul
         trustServerCertificate: true,
       },
       synchronize: true,
-      entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken],
+      entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken,FileEntity],
     }),
 
     // Segunda conexión (para inventario)
