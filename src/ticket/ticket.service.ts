@@ -175,7 +175,16 @@ export class TicketService {
         ticket.assignedTo = user;
       }
       if (updateTicketDto.nombre) ticket.nombre = updateTicketDto.nombre;
-      if (updateTicketDto.establecimiento) ticket.establecimiento.id = updateTicketDto.establecimiento;
+      if (updateTicketDto.establecimiento) {
+        ticket.establecimiento = await this.establecimientoRepository.findOne({
+            where: { id: Number(updateTicketDto.establecimiento) },
+        });
+    
+        if (!ticket.establecimiento) {
+            throw new NotFoundException('Establecimiento no encontrado');
+        }
+    }
+    
       if (updateTicketDto.subTipoIncidencia) ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;
       if (updateTicketDto.tipoIncidencia) ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;
       if (updateTicketDto.email) ticket.email = updateTicketDto.email;

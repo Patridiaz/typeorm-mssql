@@ -1,5 +1,5 @@
 import { IsDate, IsInt, IsNotEmpty, IsOptional, IsString, IsNumber } from "class-validator";
-import { Type } from 'class-transformer';
+import { Transform, Type } from 'class-transformer';
 
 export class UpdateTicketDto {
   @IsOptional()
@@ -20,6 +20,7 @@ export class UpdateTicketDto {
 
   @IsOptional()
   @IsNumber()
+  @Transform(({ value }) => Number(value)) // <- Convierte a número
   establecimiento?: number;
 
   @IsOptional()
