@@ -20,6 +20,10 @@ import { InventoryModule } from './inventario/inventario.module';
 import { TipoDispositivo } from './tipo-dispositivo/entity/tipo-dispositivo.entity';
 import { TipoDispositivoModule } from './tipo-dispositivo/tipo-dispositivo.module';
 import { FileEntity } from './ticket/entity/fileTicket.entity';
+import { MarcaDispositivo } from './marca-dispositivo/entity/marca-dispositivo.entity';
+import { MarcaDispositivoModule } from './marca-dispositivo/marca-dispositivo.module';
+import { Bodega } from './bodega/entity/bodega.entity';
+import { BodegaModule } from './bodega/bodega.module';
 
 @Module({
   imports: [
@@ -55,7 +59,7 @@ import { FileEntity } from './ticket/entity/fileTicket.entity';
         trustServerCertificate: true,
       },
       synchronize: true,
-      entities: [InventoryItem,TipoDispositivo], // solo entidades de inventario
+      entities: [InventoryItem,TipoDispositivo,MarcaDispositivo,Bodega], // solo entidades de inventario
     }),
 
     TypeOrmModule.forFeature([User,RecoveryToken]),
@@ -66,6 +70,8 @@ import { FileEntity } from './ticket/entity/fileTicket.entity';
     RolUserModule,
     InventoryModule,
     TipoDispositivoModule, // módulo de inventario   
+    MarcaDispositivoModule,
+    BodegaModule
   ],
   controllers:[AuthController],
   providers:[AuthService,MailService ]

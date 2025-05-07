@@ -6,6 +6,7 @@ import { InventoryItem } from './entity/inventario.entity';
 import { CreateInventoryItemDto } from './dto/create-inventario-item.dto';
 import { TipoDispositivo } from 'src/tipo-dispositivo/entity/tipo-dispositivo.entity';
 import { User } from 'src/auth/entity/user.entity';
+import { MarcaDispositivo } from 'src/marca-dispositivo/entity/marca-dispositivo.entity';
 
 @Injectable()
 export class InventoryService {
@@ -14,6 +15,8 @@ export class InventoryService {
     private inventoryRepository: Repository<InventoryItem>,
     @InjectRepository(TipoDispositivo, 'inventoryConnection')
     private tipoDispositivoRepository:Repository<TipoDispositivo>,
+    @InjectRepository(MarcaDispositivo, 'inventoryConnection')
+    private marcaDispositivoRepository:Repository<MarcaDispositivo>,
     @InjectRepository(User) // Conexión principal
     private readonly userRepository: Repository<User>,
   ) {}
@@ -28,7 +31,8 @@ export class InventoryService {
 
   async createInventoryItem(dto: CreateInventoryItemDto): Promise<InventoryItem> {
     const tipoDispositivo = await this.tipoDispositivoRepository.findOne({ where: { id: dto.tipoDispositivoId } });
-  
+    const marcaDispositivo = await this.marcaDispositivoRepository.findOne({ where: { id: dto.marcaDispositivoId } });
+   
     if (!tipoDispositivo) {
       throw new NotFoundException('TipoDispositivo no encontrado');
     }
@@ -41,6 +45,7 @@ export class InventoryService {
     const inventoryItem = this.inventoryRepository.create({
       ...dto,
       tipoDispositivo,
+      marcaDispositivo,
       userId: user.id,
     });
   
