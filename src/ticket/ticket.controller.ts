@@ -106,15 +106,15 @@ export class TicketController {
     // Crear el ticket
     const createdTicket = await this.ticketService.addTicket(createTicketDto, userId);
     
-    // // Enviar correo al usuario que creó el ticket
-    // const recipientEmail = createTicketDto.email;
-    // await this.mailService.sendTicketCreationEmail(recipientEmail, createdTicket);
+    // Enviar correo al usuario que creó el ticket
+    const recipientEmail = createTicketDto.email;
+    await this.mailService.sendTicketCreationEmail(recipientEmail, createdTicket);
   
-    // // Enviar correo al técnico asignado
-    // if (createdTicket.assignedTo && createdTicket.assignedTo.email) {
-    //   const technicianEmail = createdTicket.assignedTo.email;
-    //   await this.mailService.sendTicketAssignedEmail(technicianEmail, createdTicket);
-    // }
+    // Enviar correo al técnico asignado
+    if (createdTicket.assignedTo && createdTicket.assignedTo.email) {
+      const technicianEmail = createdTicket.assignedTo.email;
+      await this.mailService.sendTicketAssignedEmail(technicianEmail, createdTicket);
+    }
     
     return createdTicket;
   }
@@ -177,15 +177,15 @@ export class TicketController {
     // Recuperar el ticket actualizado
     const updatedTicket = await this.ticketService.fetchTicketById(id);
 
-    // // Enviar correo al creador del ticket
-    // const recipientEmail = updatedTicket.email;
-    // await this.mailService.sendTicketUpdateEmail(recipientEmail, updatedTicket);
+    // Enviar correo al creador del ticket
+    const recipientEmail = updatedTicket.email;
+    await this.mailService.sendTicketUpdateEmail(recipientEmail, updatedTicket);
 
-    // // Enviar correo al técnico asignado si existe
-    // const technicianEmail = updatedTicket.assignedTo?.email;
-    // if (technicianEmail) {
-    //   await this.mailService.sendTicketUpdateEmail(technicianEmail, updatedTicket);
-    // }
+    // Enviar correo al técnico asignado si existe
+    const technicianEmail = updatedTicket.assignedTo?.email;
+    if (technicianEmail) {
+      await this.mailService.sendTicketUpdateEmail(technicianEmail, updatedTicket);
+    }
 
     return { message: 'Ticket actualizado correctamente', id };
   }

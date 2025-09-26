@@ -8,12 +8,12 @@ export class MailService {
 
   constructor() {
     this.transporter = nodemailer.createTransport({
-      service: 'smtp.gmail.com', // o el servicio de correo que estés usando
-      port: 465, // <-- Asegúrate que sea 465
-      secure: true, // <-- DEBE ser true para 465
+      host: process.env.SMTP_HOST || 'smtp.sendgrid.net', 
+      port: 587, 
+      secure: false, 
       auth: {
-        user: 'tickets@eduhuechuraba.cl',
-        pass: 'rezl fziv mikg fgjq'
+        user: process.env.SMTP_USER || 'apikey',
+        pass: process.env.SMTP_PASS
       }
     });
   }
