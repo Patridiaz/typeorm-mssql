@@ -9,9 +9,11 @@ export class MailService {
   constructor() {
     this.transporter = nodemailer.createTransport({
       service: 'gmail', // o el servicio de correo que estés usando
+      port: 465, // <-- Asegúrate que sea 465
+      secure: true, // <-- DEBE ser true para 465
       auth: {
         user: 'tickets@eduhuechuraba.cl',
-        pass: 'xskg ibzg wubi mcqa'
+        pass: 'rezl fziv mikg fgjq'
       }
     });
   }

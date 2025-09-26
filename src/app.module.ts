@@ -45,33 +45,16 @@ import { BodegaModule } from './bodega/bodega.module';
       entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken,FileEntity],
     }),
 
-    // Segunda conexión (para inventario)
-    TypeOrmModule.forRoot({
-      name: 'inventoryConnection', // nombre de conexión único
-      type: 'mssql',
-      host: process.env.INVENTORY_DB_HOST || process.env.DB_HOST,
-      port: parseInt(process.env.INVENTORY_DB_PORT, 10) || 1432,
-      username: process.env.INVENTORY_DB_USER || process.env.DB_USER,
-      password: process.env.INVENTORY_DB_PASS || process.env.DB_PASS,
-      database: process.env.INVENTORY_DB_NAME || process.env.DB_NAME,
-      options: {
-        encrypt: false,
-        trustServerCertificate: true,
-      },
-      synchronize: true,
-      entities: [InventoryItem,TipoDispositivo,MarcaDispositivo,Bodega], // solo entidades de inventario
-    }),
-
     TypeOrmModule.forFeature([User,RecoveryToken]),
     TicketModule,
     AuthModule,
     EstablecimientoModule,
     TicketTypeModule,
     RolUserModule,
-    InventoryModule,
-    TipoDispositivoModule, // módulo de inventario   
-    MarcaDispositivoModule,
-    BodegaModule
+    // InventoryModule,
+    // TipoDispositivoModule, // módulo de inventario   
+    // MarcaDispositivoModule,
+    // BodegaModule
   ],
   controllers:[AuthController],
   providers:[AuthService,MailService ]
