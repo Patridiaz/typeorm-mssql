@@ -79,8 +79,8 @@ export class AuthService {
         // Guardar el nuevo usuario
         await this.userRepository.save(newUser);
     
-        // Enviar el correo de bienvenida
-        await this.mailService.sendWelcomeEmail(newUser.email, newUser.name);
+        // // Enviar el correo de bienvenida
+        // await this.mailService.sendWelcomeEmail(newUser.email, newUser.name);
     
         // Retornar el usuario como una instancia de User
         return plainToInstance(User, newUser);
