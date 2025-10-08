@@ -1,9 +1,10 @@
 import { Exclude } from "class-transformer";
-import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToOne, JoinColumn } from "typeorm";
+import { Column, Entity, OneToMany, PrimaryGeneratedColumn, ManyToOne, JoinColumn, ManyToMany, JoinTable } from "typeorm";
 import { RecoveryToken } from "./recovery-token.entity";
 import { Ticket } from "src/ticket/entity/ticket.entity";
 import { Establecimiento } from "src/colegio/entity/colegio.entity";
 import { InventoryItem } from "src/inventario/entity/inventario.entity";
+import { RolUser } from "src/rol-user/entity/rol-user.entity";
 
 @Entity('user')
 export class User {
@@ -21,9 +22,10 @@ export class User {
 
   @Column({ name: 'isActive', type: 'bit', nullable: false, default: true })
   isActive: boolean;
-  
-  @Column({ name: 'rol', type: 'nvarchar', nullable: false, default: 'user' })
-  rol: string;
+
+  @ManyToMany(() => RolUser, (rolUser) => rolUser.users, { eager: true }) // eager: true para cargar roles
+  @JoinTable({ name: 'user_roles' }) // Nombre de la tabla de unión
+  roles: RolUser[];
 
   @ManyToOne(() => Establecimiento, { eager: true })
   @JoinColumn({ name: 'establecimientoId' })
@@ -37,9 +39,6 @@ export class User {
 
   @OneToMany(() => Ticket, ticket => ticket.assignedTo)
   assignedTickets: Ticket[];
-
-
-  
 
   toJSON() {
     // Personaliza la conversión a JSON

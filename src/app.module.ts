@@ -24,6 +24,7 @@ import { MarcaDispositivo } from './marca-dispositivo/entity/marca-dispositivo.e
 import { MarcaDispositivoModule } from './marca-dispositivo/marca-dispositivo.module';
 import { Bodega } from './bodega/entity/bodega.entity';
 import { BodegaModule } from './bodega/bodega.module';
+import { RolUser } from './rol-user/entity/rol-user.entity';
 
 @Module({
   imports: [
@@ -42,7 +43,7 @@ import { BodegaModule } from './bodega/bodega.module';
         trustServerCertificate: true,
       },
       synchronize: true,
-      entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken,FileEntity],
+      entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken,FileEntity,RolUser],
     }),
 
     TypeOrmModule.forFeature([User,RecoveryToken]),

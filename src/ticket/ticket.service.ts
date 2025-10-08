@@ -25,7 +25,11 @@ export class TicketService {
         @InjectRepository(FileEntity)
         private readonly fileRepository:Repository<FileEntity>
     ){}
+  
 
+
+
+    
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
       const { tipoIncidencia, subTipoIncidencia, establecimiento, ...ticketData } = createTicketDto;
   
@@ -59,7 +63,12 @@ export class TicketService {
       if (tipoIncidencia === 'Informatica') {
           if (esAdminEstablecimiento) {
               // Asignar aleatoriamente un administrador si el establecimiento está en la lista
-              const admins = await this.userRepository.find({ where: { rol: 'admin' } });
+              const admins = await this.userRepository.find({ 
+                where: { roles: { nombre: 'admin' }},
+                relations: ['roles']
+              },
+              
+            );
               if (admins.length > 0) {
                   const randomIndex = Math.floor(Math.random() * admins.length);
                   tecnicoUser = admins[randomIndex];
@@ -71,9 +80,10 @@ export class TicketService {
               // Asignar al técnico de informática del establecimiento
               tecnicoUser = await this.userRepository.findOne({
                   where: {
-                      rol: 'tecnico_informatica',
+                      roles: { nombre: 'tecnico_informatica' },
                       establecimiento: { id: establecimientoEntity.id }
-                  }
+                  },
+                  relations: ['roles']
               });
               if (!tecnicoUser) {
                   console.log('No se encontró un técnico informático para el establecimiento.');
@@ -83,7 +93,7 @@ export class TicketService {
           }
       } else if (tipoIncidencia === 'Mantencion') {
           // Para los tickets de mantención, asignar al admin_mantencion
-          tecnicoUser = await this.userRepository.findOne({ where: { rol: 'admin_mantencion' } });
+          tecnicoUser = await this.userRepository.findOne({ where: { roles: { nombre: 'admin_mantencion' } }, relations: ['roles'] });
           if (tecnicoUser) {
               ticketEstado = 'Asignado';
           } else {
@@ -211,7 +221,7 @@ export class TicketService {
       }
     
         // Guardar el nuevo archivo
-        await writeFile(filePath, file.buffer);
+        await writeFile(filePath, file.buffer as Buffer);
     
         // Crear la nueva entidad de archivo
         const newFile = this.fileRepository.create({
@@ -302,30 +312,46 @@ export class TicketService {
         return {message: 'Ticket fue eliminado con exito.!'}
     }
 
-
-    async findTickets(user: User): Promise<Ticket[]> {
-      const query = this.ticketRepository.createQueryBuilder('ticket');
-    
-      if (user.rol === 'admin') {
-        return query.getMany(); // Admin puede ver todos los tickets
-      } else if (user.rol === 'user') {
-        return query
-          .where('ticket.createdById = :userId', { userId: user.id })
-          .getMany(); // Usuario puede ver solo sus tickets
-      } else if (user.rol.startsWith('tecnico_')) {
-        return query
-          .where('ticket.assignedToId = :userId', { userId: user.id })
-          .getMany(); // Técnicos pueden ver solo los tickets asignados a ellos
-      } else if (user.rol === 'admin_mantencion') {
-        return query
-          .where('ticket.assignedToId = :userId', { userId: user.id })
-          .orWhere('ticket.createdById = :userId', { userId: user.id }) // Añadir si admin_mantencion también necesita ver sus propios tickets
-          .getMany(); // admin_mantencion puede ver tickets asignados a él
-      } else {
-        throw new Error('Role not recognized');
+  private hasRole(user: User, roleName: string): boolean {
+      // 🛑 LOG 1: Muestra el estado de la propiedad user.roles
+      console.log(`[DEBUG hasRole] user.roles es null/undefined: ${!user.roles}`);
+      
+      if (!user.roles) {
+          return false;
       }
-    }
-    
+      
+      // 🛑 LOG 2: Muestra si el rol se encontró o no
+      const roleExists = user.roles.some(rol => rol.nombre === roleName);
+      console.log(`[DEBUG hasRole] ¿Tiene el rol '${roleName}'?: ${roleExists}`);
+      
+      // user.roles es RolUser[], mapeamos a los nombres para verificar si el rol está presente
+      return roleExists;
+  }
+
+  async findTickets(user: User): Promise<Ticket[]> {
+        const query = this.ticketRepository.createQueryBuilder('ticket');
+      
+        if (this.hasRole(user, 'admin')) {
+          return query.getMany(); // Admin puede ver todos los tickets
+        } else if (this.hasRole(user, 'user')) {
+          return query
+            .where('ticket.createdById = :userId', { userId: user.id })
+            .getMany(); // Usuario puede ver solo sus tickets
+        } else if (this.hasRole(user, 'tecnico_informatica') || this.hasRole(user, 'admin_mantencion')) {
+          // Como técnico o admin de mantención, solo ve sus tickets asignados.
+          // Opcional: Si quieres que vean todos sus tickets (asignados y creados)
+          
+          // Versión que verifica si es técnico O admin_mantencion
+          if (this.hasRole(user, 'tecnico_informatica') || this.hasRole(user, 'admin_mantencion')) {
+              return query
+              .where('ticket.assignedToId = :userId', { userId: user.id })
+              .orWhere('ticket.createdById = :userId', { userId: user.id }) 
+              .getMany();
+          }
+        } else {
+          throw new ForbiddenException('No tienes permiso para ver tickets');
+        }
+      }
     
   // Obtener tickets creados por un usuario específico
   async fetchTicketsByUserId(userId: number): Promise<Ticket[]> {
@@ -389,17 +415,18 @@ async findTicketsByRole(user: User): Promise<Ticket[]> {
   try {
     let tickets: Ticket[];
 
-    if (user.rol === 'admin') {
+    if (this.hasRole (user,'admin')) {
       // El administrador puede ver todos los tickets
+
       tickets = await query.getMany();
 
-    } else if (user.rol === 'user') {
+    } else if (this.hasRole(user,'user')) {
       // Los usuarios comunes solo pueden ver los tickets que ellos crearon
       tickets = await query
         .where('ticket.createdById = :userId', { userId: user.id })
         .getMany();
 
-    } else if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
+    } else if (this.hasRole(user,'tecnico_informatica') || this.hasRole(user,'admin_mantencion')) {
       // Técnicos informáticos y administradores de mantención pueden ver los tickets creados por ellos o asignados a ellos
       tickets = await query
         .where('ticket.assignedToId = :userId', { userId: user.id })  // Tickets asignados

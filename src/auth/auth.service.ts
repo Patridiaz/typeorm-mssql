@@ -111,7 +111,7 @@ export class AuthService {
         
         return {
             user: userWithoutPassword,
-            token: this.getJwtToken({ id: user.id })
+            token: this.getJwtToken( user )
         }
     }
 
@@ -121,18 +121,22 @@ export class AuthService {
         return this.userRepository.find()
     }
 
-    async findUserById ( id: number ){
-        const user = await this.userRepository.findOne({ where: { id } });
-        if (!user) {
-            throw new UnauthorizedException(`Usuario con ID ${id} no encontrado`);
-        }
+  async findUserById ( id: number ): Promise<User> {
+      const user = await this.userRepository.findOne({ 
+          where: { id },
+          // ✅ Asegurar que la relación 'roles' se cargue para el JWT.
+          // Si tienes { eager: true } en la entidad User, esto es opcional.
+          relations: ['roles'] 
+      }); 
 
-        const { password, ...restWithoutPassword } = user;
-        // console.log(restWithoutPassword)
-        return restWithoutPassword;
-    }
+      if (!user) {
+          throw new UnauthorizedException(`Usuario con ID ${id} no encontrado`);
+      }
+
+      // Retorna el objeto User completo
+      return user;
+  }
     
-   
 
 
     async findOne(id: number): Promise<User> {
@@ -171,90 +175,107 @@ export class AuthService {
     //     return 'This action remove a #${id} auth'
     // }
     
-    getJwtToken( payload: jwtPayload ): string {
-        return this.jwtService.sign(payload);
-    }
+  getJwtToken(user: User) {
+      // Extrae solo los nombres de los roles (ej: ['admin', 'COMPRADOR'])
+      const userRoleNames = user.roles.map(rol => rol.nombre); 
 
-// Nueva funcionalidad para recuperación de contraseña
-async requestPasswordReset(email: string): Promise<void> {
-    const user = await this.userRepository.findOne({ where: { email } });
-    if (!user) {
-        throw new NotFoundException('Usuario no encontrado');
-    }
+      const payload = {
+          sub: user.id,
+          email: user.email,
+          roles: userRoleNames, // Incluye el array de nombres de roles en el payload
+          sourceDb: 'BD_Tickets',
+      };
 
-    // Generar un token de recuperación
-    const resetToken = bcryptjs.hashSync(user.email + Date.now().toString(), 10); // Simple hash token
-    const resetTokenExpiry = new Date();
-    resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // Expira en 1 hora
-
-    // Guardar el token en la base de datos
-    await this.recoveryTokenRepository.save({
-        userId: user.id,
-        token: resetToken,
-        expiresAt: resetTokenExpiry
-    });
-
-    // Enviar correo electrónico
-    const resetUrl = `${this.BaseUrl}/auth/reset-password?token=${resetToken}`;
-    // console.log('Generated reset URL:', resetUrl);
-    await this.mailService.sendPasswordResetEmail(user.email, resetUrl);
-}
-
-async resetPassword(token: string, newPassword: string): Promise<void> {
-    try {
-        // Verificar si el token existe
-        const recoveryToken = await this.recoveryTokenRepository.findOne({ where: { token } });
-        if (!recoveryToken) {
-            // console.log('Token de recuperación no encontrado:', token);
-            throw new BadRequestException('Token de recuperación inválido o expirado');
-        }
-
-        // Verificar si el token ha expirado
-        if (recoveryToken.expiresAt < new Date()) {
-            // console.log('Token de recuperación expirado:', token);
-            throw new BadRequestException('Token de recuperación inválido o expirado');
-        }
-
-        // Obtener el usuario asociado con el token
-        const user = await this.userRepository.findOne({ where: { id: recoveryToken.userId } });
-        if (!user) {
-            // console.log('Usuario no encontrado para el token:', token);
-            throw new NotFoundException('Usuario no encontrado');
-        }
-
-        // Actualizar la contraseña del usuario
-        const hashedPassword = bcryptjs.hashSync(newPassword, 10);
-        user.password = hashedPassword;
-        await this.userRepository.save(user);
-
-        // Eliminar el token de recuperación
-        await this.recoveryTokenRepository.delete({ token });
-
-        // console.log('Contraseña restablecida exitosamente para el usuario:', user.id);
-    } catch (error) {
-        console.error('Error en el servicio de restablecimiento de contraseña:', error);
-        throw error; // Re-lanzar el error para que NestJS lo maneje
-    }
-}
-
-
-async findTecnicoByEstablecimiento(establecimientoId: number): Promise<User> {
-    const tecnico = await this.userRepository.findOne({
-      where: {
-        establecimiento: { id: establecimientoId },
-        rol: 'tecnico_informatica'
-      }
-    });
-  
-    if (!tecnico) {
-      throw new NotFoundException('Técnico no encontrado para el establecimiento');
-    }
-  
-    return tecnico;
+      // Esto firma el JWT con los datos actualizados, incluyendo el array de roles.
+      return this.jwtService.sign(payload);
   }
 
+  // Nueva funcionalidad para recuperación de contraseña
+  async requestPasswordReset(email: string): Promise<void> {
+      const user = await this.userRepository.findOne({ where: { email } });
+      if (!user) {
+          throw new NotFoundException('Usuario no encontrado');
+      }
+
+      // Generar un token de recuperación
+      const resetToken = bcryptjs.hashSync(user.email + Date.now().toString(), 10); // Simple hash token
+      const resetTokenExpiry = new Date();
+      resetTokenExpiry.setHours(resetTokenExpiry.getHours() + 1); // Expira en 1 hora
+
+      // Guardar el token en la base de datos
+      await this.recoveryTokenRepository.save({
+          userId: user.id,
+          token: resetToken,
+          expiresAt: resetTokenExpiry
+      });
+
+      // Enviar correo electrónico
+      const resetUrl = `${this.BaseUrl}/auth/reset-password?token=${resetToken}`;
+      // console.log('Generated reset URL:', resetUrl);
+      await this.mailService.sendPasswordResetEmail(user.email, resetUrl);
+  }
+
+  async resetPassword(token: string, newPassword: string): Promise<void> {
+      try {
+          // Verificar si el token existe
+          const recoveryToken = await this.recoveryTokenRepository.findOne({ where: { token } });
+          if (!recoveryToken) {
+              // console.log('Token de recuperación no encontrado:', token);
+              throw new BadRequestException('Token de recuperación inválido o expirado');
+          }
+
+          // Verificar si el token ha expirado
+          if (recoveryToken.expiresAt < new Date()) {
+              // console.log('Token de recuperación expirado:', token);
+              throw new BadRequestException('Token de recuperación inválido o expirado');
+          }
+
+          // Obtener el usuario asociado con el token
+          const user = await this.userRepository.findOne({ where: { id: recoveryToken.userId } });
+          if (!user) {
+              // console.log('Usuario no encontrado para el token:', token);
+              throw new NotFoundException('Usuario no encontrado');
+          }
+
+          // Actualizar la contraseña del usuario
+          const hashedPassword = bcryptjs.hashSync(newPassword, 10);
+          user.password = hashedPassword;
+          await this.userRepository.save(user);
+
+          // Eliminar el token de recuperación
+          await this.recoveryTokenRepository.delete({ token });
+
+          // console.log('Contraseña restablecida exitosamente para el usuario:', user.id);
+      } catch (error) {
+          console.error('Error en el servicio de restablecimiento de contraseña:', error);
+          throw error; // Re-lanzar el error para que NestJS lo maneje
+      }
+  }
+
+
+  async findTecnicoByEstablecimiento(establecimientoId: number): Promise<User> {
+      const tecnico = await this.userRepository.findOne({
+        where: {
+          establecimiento: { id: establecimientoId },
+          roles: {nombre:'tecnico_informatica'}
+        },
+        relations: ['roles']
+      });
+    
+      if (!tecnico) {
+        throw new NotFoundException('Técnico no encontrado para el establecimiento');
+      }
+    
+      return tecnico;
+    }
+
   async getTechnicians(): Promise<User[]> {
-    return this.userRepository.find({ where: { rol: 'tecnico_informatica' } });
+    return this.userRepository.find({ 
+      where: {
+        roles: { nombre: 'tecnico_informatica' } 
+      },
+      relations: ['roles']
+    });
   }
   
 

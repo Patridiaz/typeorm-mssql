@@ -29,23 +29,26 @@ export class AuthController {
     }
 
     // LoginResponse
-  @UseGuards( AuthGuard )
-  @Get('check-token')
-  async checkToken( @Request() req: Request ):Promise<LoginResponse> {
-      
-    const user = req['user'] as any;
+    @UseGuards( AuthGuard )
+    @Get('check-token')
+    async checkToken( @Request() req: Request ):Promise<LoginResponse> {
+        // 1. El AuthGuard pone el payload del JWT (incluye user.id) en req['user']
+        const jwtPayload = req['user'] as { id: number }; 
 
-    const token = await this.authService.getJwtToken({ id: user.id})
+        // 🛑 CLAVE: Obtener el usuario completo de la base de datos (con roles cargados)
+        const user = await this.authService.findUserById(jwtPayload.id);
 
-    // console.log(user)
+        // 2. Generar un token fresco: Pasamos el objeto User completo
+        //    (La función getJwtToken ahora tiene acceso a user.roles)
+        const token = this.authService.getJwtToken(user);
 
-    return {
-      user,
-      token
+        // 3. Retornar la respuesta (user.toJSON() excluye la contraseña)
+        return {
+            user: user.toJSON(), // Asumiendo que toJSON() te da el objeto limpio (sin password)
+            token
+        } as LoginResponse; 
     }
-
-  }
-
+    
   @Post('request-password-reset')
     async requestPasswordReset(@Body('email') email: string): Promise<void> {
         await this.authService.requestPasswordReset(email);

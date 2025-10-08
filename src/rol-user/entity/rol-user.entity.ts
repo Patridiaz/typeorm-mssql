@@ -1,13 +1,16 @@
-import { User } from 'src/auth/entity/user.entity';
-import { Column, Entity, PrimaryGeneratedColumn, CreateDateColumn, ManyToOne } from 'typeorm';
+import { User } from "src/auth/entity/user.entity";
+import { Column, Entity, ManyToMany, PrimaryGeneratedColumn } from "typeorm";
 
-@Entity('rolUser') //This maps the notes entity to the 'ticket' table in your DB
 
+@Entity('rolUser')
 export class RolUser {
     @PrimaryGeneratedColumn()
     id: number;
-  
-    @Column({  length: 60, nullable: false })
+
+    @Column({ length: 60, nullable: false, unique: true }) // Añade unique: true
     nombre: string;
-  
-  }
+    
+    // ✅ CLAVE: Relación Many-to-Many con la entidad User
+    @ManyToMany(() => User, (user) => user.roles)
+    users: User[];
+}

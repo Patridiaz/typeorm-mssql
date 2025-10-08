@@ -23,18 +23,24 @@ export class TicketController {
   @Get()
   async getTickets(@Req() req: Request): Promise<Ticket[]> {
     const user = req['user'];
-
-    if (user.rol === 'admin') {
-      return this.ticketService.fetchTickets(); // Admin puede ver todos los tickets
-    } else if (user.rol === 'user') {
-      return this.ticketService.fetchTicketsByUserId(user.id); // User solo puede ver sus propios tickets
-    } else if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
-      return this.ticketService.findTicketsByRole(user); // Técnico solo puede ver los tickets asignados a él
+    
+    // 🛑 CORRECCIÓN: Verifica si el array roles existe y si incluye el rol 'admin'
+    const isAdmin = user.roles?.some(rol => rol.nombre === 'admin');
+    const isUser = user.roles?.some(rol => rol.nombre === 'user');
+    const isTecnico = user.roles?.some(rol => rol.nombre === 'tecnico_informatica' || rol.nombre === 'admin_mantencion');
+    
+    if (isAdmin) { 
+      return this.ticketService.fetchTickets();
+    } else if (isUser) {
+      return this.ticketService.fetchTicketsByUserId(user.id);
+    } else if (isTecnico) {
+      // Si usas findTicketsByRole, debes saber que esta función también tiene lógica de roles interna
+      return this.ticketService.findTicketsByRole(user); 
     } else {
       throw new ForbiddenException('No tienes permiso para ver los tickets');
     }
   }
-
+  
   // Controlador en el backend
   @Get('/count')
   async countTicketsByType(@Query('tipoIncidencia') tipoIncidencia: string): Promise<number> {
