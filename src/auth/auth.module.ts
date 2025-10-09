@@ -8,11 +8,12 @@ import { ConfigModule } from '@nestjs/config';
 import { RecoveryToken } from './entity/recovery-token.entity';
 import { MailService } from './mail.service';
 import { Establecimiento } from 'src/colegio/entity/colegio.entity';
+import { RolUser } from 'src/rol-user/entity/rol-user.entity';
 
 @Module({
   imports: [
     ConfigModule.forRoot(),
-    TypeOrmModule.forFeature([User, RecoveryToken,Establecimiento]),
+    TypeOrmModule.forFeature([User, RecoveryToken,Establecimiento,RolUser]),
     JwtModule.register({
       global: true,
       secret: process.env.JWT_SEED,

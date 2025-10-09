@@ -1,8 +1,8 @@
-import { ArrayNotEmpty, IsArray, IsBoolean, IsEmail, IsString, IsOptional } from "class-validator";
+import { IsOptional, IsEmail, IsString, IsBoolean, IsArray, IsInt } from "class-validator";
 import { CreateEstablecimientoDto } from "src/colegio/dto/create-colegio.dto";
 
 export class UpdateUserDto {
-
+    // ... (campos existentes)
     @IsOptional()
     @IsEmail()
     email: string;
@@ -10,23 +10,22 @@ export class UpdateUserDto {
     @IsOptional()
     @IsString()
     name: string;
-    
-    @IsOptional()
-    @IsString()
-    password?: string; // Contraseña opcional
 
     @IsOptional()
     @IsString()
-    verifypassword?: string; // Confirmación de contraseña opcional
+    password?: string;
 
     @IsOptional()
     @IsBoolean()
     isActive?: boolean;
-
+    
+    // 💡 CAMBIO CLAVE: Cambiar 'rol: string' por 'roleIds: number[]'
     @IsOptional()
-    @IsString() // Asegura que el rol sea una cadena
-    rol: string;
-
+    @IsArray()
+    @IsInt({ each: true }) // Asegura que cada elemento del array sea un entero (ID)
+    roleIds?: number[]; // Array de IDs de los roles a asignar
+    
+    // Si necesitas cambiar el establecimiento:
     @IsOptional()
-    establecimiento?: CreateEstablecimientoDto; // Objeto de establecimiento
+    establecimientoId?: number; // Usar solo el ID
 }

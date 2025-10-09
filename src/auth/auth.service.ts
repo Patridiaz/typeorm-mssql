@@ -13,6 +13,7 @@ import { MailService } from './mail.service';
 import { config } from 'dotenv';
 import { Establecimiento } from 'src/colegio/entity/colegio.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { RolUser } from 'src/rol-user/entity/rol-user.entity';
 
 config(); // Cargar variables de entorno
 
@@ -30,7 +31,9 @@ export class AuthService {
         private recoveryTokenRepository: Repository<RecoveryToken>,
         private mailService: MailService,
         @InjectRepository(Establecimiento)
-        private establecimientoRepository: Repository<Establecimiento>
+        private establecimientoRepository: Repository<Establecimiento>,
+        @InjectRepository(RolUser)
+        private rolUserRepository: Repository<RolUser>, 
 
     ){
         this.BaseUrl = process.env.BASE_URL ;
@@ -154,22 +157,62 @@ export class AuthService {
 
 
     // Actualizar un usuario
-    async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {
-        // Verifica si el usuario existe
-        const user = await this.userRepository.findOne({ where: { id } });
-        if (!user) {
-            throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
-        }
-
-        // Si se proporciona una nueva contraseña, encripta la contraseña
-        if (updateUserDto.password) {
-            updateUserDto.password = bcryptjs.hashSync(updateUserDto.password, 10);
-        }
-
-        // Actualiza el usuario con los datos del DTO
-        await this.userRepository.update(id, updateUserDto);
-        return this.findOne(id);
+// Actualizar un usuario
+async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {
+    
+    // 1. Verificar si el usuario existe y cargar sus relaciones actuales
+    const user = await this.userRepository.findOne({ 
+        where: { id },
+        relations: ['roles', 'establecimiento'] // Cargar roles y establecimiento
+    });
+    
+    if (!user) {
+        throw new NotFoundException(`Usuario con ID ${id} no encontrado`);
     }
+
+    // Desestructurar DTO para manejo especial de roles y password
+    const { password, roleIds, establecimientoId, ...fieldsToUpdate } = updateUserDto;
+
+    // 2. Actualizar Contraseña (si se proporciona)
+    if (password) {
+        user.password = bcryptjs.hashSync(password, 10);
+    }
+    
+    // 3. Actualizar Roles (si se proporcionan IDs)
+    if (roleIds !== undefined) {
+        if (roleIds.length === 0) {
+            // Si el array está vacío, desasociar todos los roles
+            user.roles = [];
+        } else {
+            // Buscar las entidades RolUser por sus IDs
+            const roles = await this.rolUserRepository.findByIds(roleIds);
+            if (roles.length !== roleIds.length) {
+                // Manejar error si se envía un ID de rol que no existe
+                throw new BadRequestException('Uno o más IDs de rol proporcionados son inválidos.');
+            }
+            user.roles = roles;
+        }
+    }
+
+    // 4. Actualizar Establecimiento (si se proporciona ID)
+    if (establecimientoId !== undefined) {
+        const est = await this.establecimientoRepository.findOne({ where: { id: establecimientoId } });
+        if (!est) {
+            throw new BadRequestException('Establecimiento no encontrado');
+        }
+        user.establecimiento = est;
+    }
+
+    // 5. Aplicar otros campos escalares y guardar la entidad
+    this.userRepository.merge(user, fieldsToUpdate);
+    
+    // El método .save() maneja las relaciones Many-to-Many
+    await this.userRepository.save(user); 
+    
+    // 6. Retornar el usuario actualizado (con relaciones cargadas)
+    // El método .toJSON() en la entidad User debería manejar la exclusión del password
+    return user; 
+}
 
     // remove(id: number) {
     //     return 'This action remove a #${id} auth'
