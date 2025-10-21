@@ -10,9 +10,10 @@ export class UpdateTicketDto {
   @IsString()
   comentario?: string;
 
-  @IsOptional() // El ID del técnico puede no ser obligatorio
-  @IsInt()
-  assignedTo?: number;
+  @IsOptional() 
+  @Type(() => Number) // ✅ AÑADE ESTA LÍNEA
+  @IsInt()
+  assignedTo?: number;
 
   @IsOptional()
   @IsString()

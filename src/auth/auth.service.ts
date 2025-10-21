@@ -320,6 +320,4 @@ async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {
       relations: ['roles']
     });
   }
-  
-
 }

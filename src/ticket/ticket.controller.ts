@@ -146,8 +146,13 @@ export class TicketController {
   ) {
     const user = req['user'];
 
-    // Verificar permisos
-    if (!['admin', 'tecnico_informatica', 'admin_mantencion'].includes(user.rol)) {
+    const allowedRoles = ['admin', 'tecnico_informatica', 'admin_mantencion'];
+
+    const userRoleNames = user.roles.map((rol: any) => rol.nombre);
+
+    const hasPermission = userRoleNames.some(roleName => allowedRoles.includes(roleName));
+
+    if (!hasPermission) {
       throw new ForbiddenException('No tienes permiso para actualizar el ticket');
     }
 
@@ -157,9 +162,14 @@ export class TicketController {
       throw new NotFoundException('Ticket no encontrado');
     }
 
-    // Si el usuario es técnico o admin de mantención, limitar los campos que puede actualizar
-    if (user.rol === 'tecnico_informatica' || user.rol === 'admin_mantencion') {
-      updateTicketDto = {
+    const isTecnico = userRoleNames.includes('tecnico_informatica') || userRoleNames.includes('admin_mantencion');
+    const isAdmin = userRoleNames.includes('admin');
+
+    // Si el usuario es técnico Y NO es admin, limita los campos
+    if (isTecnico && !isAdmin) {
+      updateTicketDto = {
+        // ... (Tu lógica para limitar campos)
+        // ... (Asegúrate de incluir todos los campos que envías desde el frontend)
         estado: updateTicketDto.estado,
         comentario: updateTicketDto.comentario,
         nombre: updateTicketDto.nombre,
@@ -168,8 +178,10 @@ export class TicketController {
         tipoIncidencia: updateTicketDto.tipoIncidencia,
         email: updateTicketDto.email,
         incidencia: updateTicketDto.incidencia,
-        assignedTo: updateTicketDto.assignedTo,
-      };
+        // Aquí falta 'anexo' y 'tecnicoAsignado' que envías desde el frontend
+        // Debes asegurarte de que el 'UpdateTicketDto' los acepte
+        assignedTo: updateTicketDto.assignedTo, 
+      };
     }
 
     // Llamar al servicio para actualizar el ticket y adjuntar el archivo
