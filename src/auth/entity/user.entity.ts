@@ -31,6 +31,7 @@ export class User {
   @JoinColumn({ name: 'establecimientoId' })
   establecimiento: Establecimiento;
 
+
   @OneToMany(() => RecoveryToken, recoveryToken => recoveryToken.user)
   recoveryTokens: RecoveryToken[];
 

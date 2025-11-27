@@ -28,9 +28,8 @@ import { RolUser } from './rol-user/entity/rol-user.entity';
 
 @Module({
   imports: [
-
     ConfigModule.forRoot(),
-    
+
     TypeOrmModule.forRoot({
       type: 'mssql',
       host: process.env.DB_HOST,
@@ -45,17 +44,12 @@ import { RolUser } from './rol-user/entity/rol-user.entity';
       synchronize: true,
       entities: [Ticket, User, Establecimiento, TipoTicket,RecoveryToken,FileEntity,RolUser],
     }),
-
     TypeOrmModule.forFeature([User,RecoveryToken]),
     TicketModule,
     AuthModule,
     EstablecimientoModule,
     TicketTypeModule,
     RolUserModule,
-    // InventoryModule,
-    // TipoDispositivoModule, // módulo de inventario   
-    // MarcaDispositivoModule,
-    // BodegaModule
   ],
   controllers:[AuthController],
   providers:[AuthService,MailService ]
