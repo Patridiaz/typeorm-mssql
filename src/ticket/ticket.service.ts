@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { Ticket } from './entity/ticket.entity';
-import { Repository } from 'typeorm';
+import { Brackets, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
@@ -10,7 +10,6 @@ import { FileEntity } from './entity/fileTicket.entity';
 import { extname, join } from 'path';
 import { existsSync } from 'fs';
 import { unlink, writeFile } from 'fs/promises';
-import { Multer } from 'multer';
 
 @Injectable()
 export class TicketService {
@@ -23,451 +22,329 @@ export class TicketService {
         @InjectRepository(Establecimiento)
         private readonly establecimientoRepository: Repository<Establecimiento>,
         @InjectRepository(FileEntity)
-        private readonly fileRepository:Repository<FileEntity>
-    ){}
-  
+        private readonly fileRepository: Repository<FileEntity>
+    ) { }
 
+    // =================================================================
+    // 1. CREACIÓN DE TICKETS
+    // =================================================================
 
-
-    
     async addTicket(createTicketDto: CreateTicketDto, userId: number): Promise<Ticket> {
-      const { tipoIncidencia, subTipoIncidencia, establecimiento, ...ticketData } = createTicketDto;
-  
-      // Generar el código de incidencia
-      const codigoIncidencia = await this.generateCodigoIncidencia(tipoIncidencia);
-  
-      const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['establecimiento'] });
-      if (!user) throw new ForbiddenException('Usuario no encontrado');
-  
-      let tecnicoUser: User | null = null;
-      let ticketEstado = 'Pendiente'; // Estado por defecto
-  
-      const establecimientoEntity = await this.establecimientoRepository.findOne({ where: { id: establecimiento } });
-      if (!establecimientoEntity) throw new NotFoundException('Establecimiento no encontrado');
-  
-      const adminEstablecimientos = [
-          "Rayito de Luna",
-          "Jorge Inostroza",
-          "Sala Cuna Sol de Huechuraba",
-          "Los Libertadores",
-          "Biblioteca Municipal de Huechuraba", 
-          "Departamento Educacion Municipal"
-      ];
-      
-      // Convertimos a minúsculas y eliminamos espacios adicionales para comparar correctamente
-      const establecimientoNormalizado = establecimientoEntity.name.trim().toLowerCase();
-      const esAdminEstablecimiento = adminEstablecimientos
-          .map(e => e.trim().toLowerCase())
-          .includes(establecimientoNormalizado);
-  
-      if (tipoIncidencia === 'Informatica') {
-          if (esAdminEstablecimiento) {
-              // Asignar aleatoriamente un administrador si el establecimiento está en la lista
-              const admins = await this.userRepository.find({ 
-                where: { roles: { nombre: 'admin' }},
-                relations: ['roles']
-              },
-              
-            );
-              if (admins.length > 0) {
-                  const randomIndex = Math.floor(Math.random() * admins.length);
-                  tecnicoUser = admins[randomIndex];
-                  ticketEstado = 'Asignado';
-              } else {
-                  console.log('No se encontró un administrador para el establecimiento.');
-              }
-          } else {
-              // Asignar al técnico de informática del establecimiento
-              tecnicoUser = await this.userRepository.findOne({
-                  where: {
-                      roles: { nombre: 'tecnico_informatica' },
-                      establecimiento: { id: establecimientoEntity.id }
-                  },
-                  relations: ['roles']
-              });
-              if (!tecnicoUser) {
-                  console.log('No se encontró un técnico informático para el establecimiento.');
-              } else {
-                  ticketEstado = 'Asignado';
-              }
-          }
-      } else if (tipoIncidencia === 'Mantencion') {
-          // Para los tickets de mantención, asignar al admin_mantencion
-          tecnicoUser = await this.userRepository.findOne({ where: { roles: { nombre: 'admin_mantencion' } }, relations: ['roles'] });
-          if (tecnicoUser) {
-              ticketEstado = 'Asignado';
-          } else {
-              throw new NotFoundException('Administrador de Mantención no encontrado');
-          }
-      }
-  
-      const ticket = this.ticketRepository.create({
-          ...ticketData,
-          tipoIncidencia,
-          subTipoIncidencia,  // Guardar el subtipo si está presente
-          createdBy: user,
-          assignedTo: tecnicoUser,
-          estado: ticketEstado,
-          establecimiento: establecimientoEntity,
-          codigoIncidencia,
-      });
-  
-      try {
-          return await this.ticketRepository.save(ticket);
-      } catch (error) {
-          console.error('Error al guardar el ticket:', error);
-          throw new InternalServerErrorException('Error al guardar el ticket');
-      }
-  }
-    
-    
+        const { tipoIncidencia, subTipoIncidencia, establecimiento, ...ticketData } = createTicketDto;
 
-    // Obtenemos (FETCH)  todas los tickets de la base de datos
+        const codigoIncidencia = await this.generateCodigoIncidencia(tipoIncidencia);
+
+        const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['establecimiento'] });
+        if (!user) throw new ForbiddenException('Usuario no encontrado');
+
+        let tecnicoUser: User | null = null;
+        let ticketEstado = 'Pendiente';
+
+        const establecimientoEntity = await this.establecimientoRepository.findOne({ where: { id: establecimiento } });
+        if (!establecimientoEntity) throw new NotFoundException('Establecimiento no encontrado');
+
+        const adminEstablecimientos = [
+            "Rayito de Luna", "Jorge Inostroza", "Sala Cuna Sol de Huechuraba",
+            "Los Libertadores", "Biblioteca Municipal de Huechuraba", "Departamento Educacion Municipal"
+        ];
+
+        const establecimientoNormalizado = establecimientoEntity.name.trim().toLowerCase();
+        const esAdminEstablecimiento = adminEstablecimientos
+            .map(e => e.trim().toLowerCase())
+            .includes(establecimientoNormalizado);
+
+        if (tipoIncidencia === 'Informatica') {
+            if (esAdminEstablecimiento) {
+                const admins = await this.userRepository.find({
+                    where: { roles: { nombre: 'admin' } },
+                    relations: ['roles']
+                });
+                if (admins.length > 0) {
+                    const randomIndex = Math.floor(Math.random() * admins.length);
+                    tecnicoUser = admins[randomIndex];
+                    ticketEstado = 'Asignado';
+                }
+            } else {
+                tecnicoUser = await this.userRepository.findOne({
+                    where: {
+                        roles: { nombre: 'tecnico_informatica' },
+                        establecimiento: { id: establecimientoEntity.id }
+                    },
+                    relations: ['roles']
+                });
+                if (tecnicoUser) {
+                    ticketEstado = 'Asignado';
+                }
+            }
+        } else if (tipoIncidencia === 'Mantencion') {
+            tecnicoUser = await this.userRepository.findOne({ where: { roles: { nombre: 'admin_mantencion' } }, relations: ['roles'] });
+            if (tecnicoUser) {
+                ticketEstado = 'Asignado';
+            } else {
+                throw new NotFoundException('Administrador de Mantención no encontrado');
+            }
+        }
+
+        const ticket = this.ticketRepository.create({
+            ...ticketData,
+            tipoIncidencia,
+            subTipoIncidencia,
+            createdBy: user,
+            assignedTo: tecnicoUser,
+            estado: ticketEstado,
+            establecimiento: establecimientoEntity,
+            codigoIncidencia,
+        });
+
+        try {
+            return await this.ticketRepository.save(ticket);
+        } catch (error) {
+            console.error('Error al guardar el ticket:', error);
+            throw new InternalServerErrorException('Error al guardar el ticket');
+        }
+    }
+
+    // =================================================================
+    // 2. OBTENCIÓN DE TICKETS (LÓGICA UNIFICADA Y CORREGIDA)
+    // =================================================================
+
+    /**
+     * Método principal para buscar tickets según el rol del usuario.
+     * Reemplaza la lógica antigua de findTicketsByRole para evitar duplicidad.
+     */
+async findTickets(user: User): Promise<Ticket[]> {
+        const query = this.ticketRepository.createQueryBuilder('ticket')
+            .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')
+            .leftJoinAndSelect('ticket.createdBy', 'createdBy')
+            .leftJoinAndSelect('ticket.establecimiento', 'establecimiento')
+            .orderBy('ticket.fecha', 'DESC'); // Ordenar por fecha
+
+        // 🔍 DEBUG: Ver qué roles está detectando el backend
+        console.log(`Usuario: ${user.email}, Roles detectados:`, user.roles);
+
+        // CASO 1: ADMIN (Ve todo)
+        if (this.hasRole(user, 'admin')) {
+            console.log('--> Acceso ADMIN: Retornando todos los tickets');
+            return await query.getMany();
+        }
+
+        // CASO 2: MANTENCIÓN VIEW
+        // Ve (Tickets de Mantención) O (Tickets creados por él mismo)
+        // EXCLUYE implícitamente los de informática de otros.
+        if (this.hasRole(user, 'mantencion_view')) {
+            console.log('--> Acceso MANTENCION VIEW');
+            return await query
+                .andWhere(new Brackets((qb) => {
+                    qb.where('ticket.tipoIncidencia = :tipo', { tipo: 'Mantencion' })
+                      .orWhere('ticket.createdById = :userId', { userId: user.id });
+                }))
+                .getMany();
+        }
+
+        // CASO 3: TÉCNICOS (Informatica o Admin Mantencion)
+        // Ve (Asignados a él) O (Creados por él)
+        if (this.hasRole(user, 'tecnico_informatica') || this.hasRole(user, 'admin_mantencion')) {
+            console.log('--> Acceso TECNICO');
+            return await query
+                .andWhere(new Brackets((qb) => {
+                    qb.where('ticket.assignedToId = :userId', { userId: user.id })
+                      .orWhere('ticket.createdById = :userId', { userId: user.id });
+                }))
+                .getMany();
+        }
+
+        // CASO 4: USUARIO COMÚN (Default)
+        // Solo ve lo que él creó
+        console.log('--> Acceso USUARIO (Default)');
+        return await query
+            .where('ticket.createdById = :userId', { userId: user.id })
+            .getMany();
+    }
+
+    // Mantenemos este método por compatibilidad si lo usas en otro lado,
+    // pero ahora simplemente delega al método principal corregido.
+    async findTicketsByRole(user: User): Promise<Ticket[]> {
+        return this.findTickets(user);
+    }
+
+    // --- Métodos Auxiliares de Fetch ---
+
     async fetchTickets(): Promise<Ticket[]> {
         return this.ticketRepository.find();
     }
 
     async fetchTicketById(id: number): Promise<Ticket> {
-      try {
-        return await this.ticketRepository.createQueryBuilder('ticket')
-          .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')
-          .leftJoinAndSelect('ticket.createdBy', 'createdBy')
-          .leftJoinAndSelect('ticket.establecimiento', 'establecimiento') // Asegúrate de incluir esta relación
-          .where('ticket.id = :id', { id })
-          .getOne();
-      } catch (error) {
-        console.error('Error fetching ticket by ID:', error);
-        throw new InternalServerErrorException('Error fetching ticket by ID');
-      }
-    }
-
-    async fetchTicketFileById(id: number): Promise<{ filename: string; path: string } | null> {
-      try {
-        const ticket = await this.ticketRepository.createQueryBuilder('ticket')
-          .leftJoinAndSelect('ticket.file', 'file') // Solo unimos la relación con el archivo
-          .where('ticket.id = :id', { id })
-          .getOne();
-    
-        if (!ticket || !ticket.file) return null;
-    
-        return { filename: ticket.file.filename, path: ticket.file.path };
-      } catch (error) {
-        console.error('Error fetching file by ticket ID:', error);
-        throw new InternalServerErrorException('Error fetching file');
-      }
-    }
-    
-
-    async updateTicket(
-      id: number,
-      updateTicketDto: UpdateTicketDto,
-      file?: Express.Multer.File,
-    ): Promise<Ticket> {
-      const ticket = await this.ticketRepository.findOne({
-        where: { id },
-        relations: ['file'], // Cargar la relación con archivos
-      });
-    
-      if (!ticket) {
-        throw new NotFoundException('Ticket no encontrado');
-      }
-    
-      // Actualizar campos si existen en la solicitud
-      const codigoIncidenciaOriginal = ticket.codigoIncidencia;
-
-      if (updateTicketDto.estado) ticket.estado = updateTicketDto.estado;
-      if (updateTicketDto.comentario) ticket.comentario = updateTicketDto.comentario;
-      if (updateTicketDto.assignedTo !== undefined) {
-        const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
-        if (!user) {
-          throw new NotFoundException('Técnico no encontrado');
+        try {
+            return await this.ticketRepository.createQueryBuilder('ticket')
+                .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')
+                .leftJoinAndSelect('ticket.createdBy', 'createdBy')
+                .leftJoinAndSelect('ticket.establecimiento', 'establecimiento')
+                .where('ticket.id = :id', { id })
+                .getOne();
+        } catch (error) {
+            console.error('Error fetching ticket by ID:', error);
+            throw new InternalServerErrorException('Error fetching ticket by ID');
         }
-        ticket.assignedTo = user;
-      }
-      if (updateTicketDto.nombre) ticket.nombre = updateTicketDto.nombre;
-      if (updateTicketDto.establecimiento) {
-        ticket.establecimiento = await this.establecimientoRepository.findOne({
-            where: { id: Number(updateTicketDto.establecimiento) },
+    }
+
+    async fetchTicketsByUserId(userId: number): Promise<Ticket[]> {
+        return this.ticketRepository.createQueryBuilder('ticket')
+            .leftJoinAndSelect('ticket.establecimiento', 'establecimiento')
+            .where('ticket.createdById = :userId', { userId })
+            .getMany();
+    }
+
+    // =================================================================
+    // 3. ACTUALIZACIÓN Y ARCHIVOS
+    // =================================================================
+
+    async updateTicket(id: number, updateTicketDto: UpdateTicketDto, file?: Express.Multer.File): Promise<Ticket> {
+        const ticket = await this.ticketRepository.findOne({
+            where: { id },
+            relations: ['file'],
         });
-    
-        if (!ticket.establecimiento) {
-            throw new NotFoundException('Establecimiento no encontrado');
+
+        if (!ticket) throw new NotFoundException('Ticket no encontrado');
+
+        const codigoIncidenciaOriginal = ticket.codigoIncidencia;
+
+        if (updateTicketDto.estado) ticket.estado = updateTicketDto.estado;
+        if (updateTicketDto.comentario) ticket.comentario = updateTicketDto.comentario;
+        if (updateTicketDto.assignedTo !== undefined) {
+            const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
+            if (!user) throw new NotFoundException('Técnico no encontrado');
+            ticket.assignedTo = user;
         }
+        if (updateTicketDto.nombre) ticket.nombre = updateTicketDto.nombre;
+        if (updateTicketDto.establecimiento) {
+            ticket.establecimiento = await this.establecimientoRepository.findOne({
+                where: { id: Number(updateTicketDto.establecimiento) },
+            });
+            if (!ticket.establecimiento) throw new NotFoundException('Establecimiento no encontrado');
+        }
+
+        if (updateTicketDto.subTipoIncidencia) ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;
+        if (updateTicketDto.tipoIncidencia) ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;
+        if (updateTicketDto.email) ticket.email = updateTicketDto.email;
+        if (updateTicketDto.incidencia) ticket.incidencia = updateTicketDto.incidencia;
+        if (updateTicketDto.fecha) ticket.fecha = updateTicketDto.fecha;
+
+        ticket.codigoIncidencia = codigoIncidenciaOriginal;
+
+        if (file && file.buffer) {
+            const uploadDir = './uploads';
+            const fileExt = extname(file.originalname);
+            const newFileName = `${id}${fileExt}`;
+            const filePath = join(uploadDir, newFileName);
+
+            if (ticket.file) {
+                const oldFilePath = join(uploadDir, ticket.file?.filename);
+                if (existsSync(oldFilePath)) await unlink(oldFilePath);
+                await this.fileRepository.delete(ticket.file?.id);
+            }
+
+            await writeFile(filePath, file.buffer as Buffer);
+
+            const newFile = this.fileRepository.create({
+                filename: newFileName,
+                path: filePath,
+                mimetype: file.mimetype,
+                size: file.size,
+            });
+
+            await this.fileRepository.save(newFile);
+            ticket.file = newFile;
+        }
+
+        await this.ticketRepository.save(ticket);
+        return ticket;
     }
-    
-      if (updateTicketDto.subTipoIncidencia) ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;
-      if (updateTicketDto.tipoIncidencia) ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;
-      if (updateTicketDto.email) ticket.email = updateTicketDto.email;
-      if (updateTicketDto.incidencia) ticket.incidencia = updateTicketDto.incidencia;
-      if (updateTicketDto.fecha) ticket.fecha = updateTicketDto.fecha;
-    
-      ticket.codigoIncidencia = codigoIncidenciaOriginal;
 
-      if (file && file.buffer) {
-        const uploadDir = './uploads';
-        const fileExt = extname(file.originalname);
-        const newFileName = `${id}${fileExt}`;
-        const filePath = join(uploadDir, newFileName);
-    
-      // Si el ticket ya tenía un archivo, eliminarlo antes de guardar el nuevo
-      if (ticket.file) {
+    async saveFileToTicket(ticketId: number, file: Express.Multer.File) {
+        const ticket = await this.ticketRepository.findOne({
+            where: { id: ticketId },
+            relations: ['file'],
+        });
 
-        const oldFilePath = join(uploadDir, ticket.file?.filename);
-        if (existsSync(oldFilePath)) {
-          await unlink(oldFilePath); // Eliminar el archivo físico
-        }
+        if (!ticket) throw new NotFoundException('Ticket no encontrado');
 
-        await this.fileRepository.delete(ticket.file?.id); // Eliminar el archivo de la base de datos
-      }
-    
-        // Guardar el nuevo archivo
-        await writeFile(filePath, file.buffer as Buffer);
-    
-        // Crear la nueva entidad de archivo
         const newFile = this.fileRepository.create({
-            filename: newFileName,
-            path: filePath,
+            filename: file.filename,
+            path: file.path,
             mimetype: file.mimetype,
             size: file.size,
         });
-    
+
         await this.fileRepository.save(newFile);
-    
-        // Asociar el nuevo archivo al ticket
         ticket.file = newFile;
-      }
-    
-      await this.ticketRepository.save(ticket);
-      return ticket;
-    }
-    
-    async saveFileToTicket(ticketId: number, file: Express.Multer.File) {
-      const ticket = await this.ticketRepository.findOne({
-        where: { id: ticketId },
-        relations: ['file'],
-      });
-    
-      if (!ticket) {
-        throw new NotFoundException('Ticket no encontrado');
-      }
-    
-      // Guardar nueva referencia en la base de datos
-      const newFile = this.fileRepository.create({
-        filename: file.filename,
-        path: file.path,
-        mimetype: file.mimetype,
-        size: file.size,
-      });
-    
-      await this.fileRepository.save(newFile);
-    
-      // Asociar el nuevo archivo al ticket
-      ticket.file = newFile;
-      await this.ticketRepository.save(ticket);
+        await this.ticketRepository.save(ticket);
     }
 
-    
+    async fetchTicketFileById(id: number): Promise<{ filename: string; path: string } | null> {
+        try {
+            const ticket = await this.ticketRepository.createQueryBuilder('ticket')
+                .leftJoinAndSelect('ticket.file', 'file')
+                .where('ticket.id = :id', { id })
+                .getOne();
 
+            if (!ticket || !ticket.file) return null;
+            return { filename: ticket.file.filename, path: ticket.file.path };
+        } catch (error) {
+            console.error('Error fetching file by ticket ID:', error);
+            throw new InternalServerErrorException('Error fetching file');
+        }
+    }
 
-    // async updateTicket(id: number, updateTicketDto: UpdateTicketDto): Promise<Ticket> {
-    //   const ticket = await this.ticketRepository.findOne({ where: { id } });
+    // =================================================================
+    // 4. UTILIDADES Y OTROS
+    // =================================================================
 
-    //   if (!ticket) {
-    //     throw new NotFoundException('Ticket no encontrado');
-    //   }
-  
-    //   // Actualización de cada campo si se ha proporcionado un valor
-    //   if (updateTicketDto.estado) { ticket.estado = updateTicketDto.estado;} 
-    //   if (updateTicketDto.comentario) { ticket.comentario = updateTicketDto.comentario;}
-    //   if (updateTicketDto.assignedTo !== undefined) { const user = await this.userRepository.findOne({ where: { id: updateTicketDto.assignedTo } });
-    //     if (!user) {
-    //       throw new NotFoundException('Técnico no encontrado');
-    //     }
-    //     ticket.assignedTo = user;
-    //   }
-  
-    //   if (updateTicketDto.nombre) { ticket.nombre = updateTicketDto.nombre;}
-    //   if (updateTicketDto.establecimiento) { ticket.establecimiento.id = updateTicketDto.establecimiento;}
-    //   if (updateTicketDto.subTipoIncidencia) { ticket.subTipoIncidencia = updateTicketDto.subTipoIncidencia;}
-    //   if (updateTicketDto.tipoIncidencia) { ticket.tipoIncidencia = updateTicketDto.tipoIncidencia;}
-    //   if (updateTicketDto.email) { ticket.email = updateTicketDto.email;}
-    //   if (updateTicketDto.anexo) { ticket.anexo = updateTicketDto.anexo;}
-    //   if (updateTicketDto.incidencia) { ticket.incidencia = updateTicketDto.incidencia;}
-    //   if (updateTicketDto.fecha) {ticket.fecha = updateTicketDto.fecha;
-    //   }
-  
-    //   // Guardar el ticket actualizado
-    //   await this.ticketRepository.save(ticket);
-  
-    //   return ticket; // Devolver el ticket actualizado
-    // }
-  
-
-    //Eliminar ticket de la base de datos por ID
-    async removeTicket(id:string){
+    async removeTicket(id: string) {
         const result = await this.ticketRepository.delete(id);
-        if (result.affected === 0){
-            throw new NotFoundException(`Ticket "${id}" no se encuentra`)
-        }
-        return {message: 'Ticket fue eliminado con exito.!'}
+        if (result.affected === 0) throw new NotFoundException(`Ticket "${id}" no se encuentra`);
+        return { message: 'Ticket fue eliminado con exito.!' }
     }
 
-  private hasRole(user: User, roleName: string): boolean {
-      // 🛑 LOG 1: Muestra el estado de la propiedad user.roles
-      console.log(`[DEBUG hasRole] user.roles es null/undefined: ${!user.roles}`);
-      
-      if (!user.roles) {
-          return false;
-      }
-      
-      // 🛑 LOG 2: Muestra si el rol se encontró o no
-      const roleExists = user.roles.some(rol => rol.nombre === roleName);
-      console.log(`[DEBUG hasRole] ¿Tiene el rol '${roleName}'?: ${roleExists}`);
-      
-      // user.roles es RolUser[], mapeamos a los nombres para verificar si el rol está presente
-      return roleExists;
-  }
-
-  async findTickets(user: User): Promise<Ticket[]> {
-        const query = this.ticketRepository.createQueryBuilder('ticket');
-      
-        if (this.hasRole(user, 'admin')) {
-          return query.getMany(); // Admin puede ver todos los tickets
-        } else if (this.hasRole(user, 'user')) {
-          return query
-            .where('ticket.createdById = :userId', { userId: user.id })
-            .getMany(); // Usuario puede ver solo sus tickets
-        } else if (this.hasRole(user, 'tecnico_informatica') || this.hasRole(user, 'admin_mantencion')) {
-          // Como técnico o admin de mantención, solo ve sus tickets asignados.
-          // Opcional: Si quieres que vean todos sus tickets (asignados y creados)
-          
-          // Versión que verifica si es técnico O admin_mantencion
-          if (this.hasRole(user, 'tecnico_informatica') || this.hasRole(user, 'admin_mantencion')) {
-              return query
-              .where('ticket.assignedToId = :userId', { userId: user.id })
-              .orWhere('ticket.createdById = :userId', { userId: user.id }) 
-              .getMany();
-          }
-        } else {
-          throw new ForbiddenException('No tienes permiso para ver tickets');
-        }
-      }
-    
-  // Obtener tickets creados por un usuario específico
-  async fetchTicketsByUserId(userId: number): Promise<Ticket[]> {
-    return this.ticketRepository.createQueryBuilder('ticket')
-      .leftJoinAndSelect('ticket.establecimiento', 'establecimiento') // Incluye el establecimiento
-      .where('ticket.createdById = :userId', { userId })
-      .getMany();
-  }
-  
-
-  async fetchTicketsByTechnicianId(technicianId: number): Promise<Ticket[]> {
-    try {
-      // console.log('Technician ID:', technicianId); // Verifica que el ID sea correcto
-      return await this.ticketRepository.createQueryBuilder('ticket')
-        .where('ticket.assignedToId = :technicianId', { technicianId })
-        .getMany();
-    } catch (error) {
-      console.error('Error fetching tickets by technician ID:', error);
-      throw new InternalServerErrorException('Error fetching tickets by technician ID');
-    }
-  }
-  
-  
-    // Método para obtener el total de tickets
     async countTicketsByType(tipoIncidencia: string): Promise<number> {
-      try {
-        const count = await this.ticketRepository.count({
-          where: { tipoIncidencia },
-        });
-        return count; // Devuelve el conteo
-      } catch (error) {
-        throw new InternalServerErrorException('Error al contar tickets por tipo');
-      }
-    }
-
-  async getLatestTickets(): Promise<Ticket[]> {
-    try {
-        const tickets = await this.ticketRepository.createQueryBuilder('ticket')
-            .orderBy('ticket.fecha', 'DESC')
-            .limit(10)
-            .getMany();
-        
-        if (tickets.length === 0) {
-            console.warn('No tickets found.');
+        try {
+            return await this.ticketRepository.count({ where: { tipoIncidencia } });
+        } catch (error) {
+            throw new InternalServerErrorException('Error al contar tickets por tipo');
         }
-        
-        // console.log('Tickets fetched:', tickets);
-        return tickets;
-    } catch (error) {
-        console.error('Error fetching latest tickets:', error);
-        throw new InternalServerErrorException('Error fetching tickets');
-    }
-}
-
-async findTicketsByRole(user: User): Promise<Ticket[]> {
-  const query = this.ticketRepository.createQueryBuilder('ticket')
-    .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')  // Trae los datos del técnico asignado
-    .leftJoinAndSelect('ticket.createdBy', 'createdBy')    // Trae los datos del creador del ticket
-    .leftJoinAndSelect('ticket.establecimiento', 'establecimiento'); // Trae el establecimiento del ticket
-
-  try {
-    let tickets: Ticket[];
-
-    if (this.hasRole (user,'admin')) {
-      // El administrador puede ver todos los tickets
-
-      tickets = await query.getMany();
-
-    } else if (this.hasRole(user,'user')) {
-      // Los usuarios comunes solo pueden ver los tickets que ellos crearon
-      tickets = await query
-        .where('ticket.createdById = :userId', { userId: user.id })
-        .getMany();
-
-    } else if (this.hasRole(user,'tecnico_informatica') || this.hasRole(user,'admin_mantencion')) {
-      // Técnicos informáticos y administradores de mantención pueden ver los tickets creados por ellos o asignados a ellos
-      tickets = await query
-        .where('ticket.assignedToId = :userId', { userId: user.id })  // Tickets asignados
-        .orWhere('ticket.createdById = :userId', { userId: user.id }) // Tickets creados por ellos
-        .getMany();
-
-    } else {
-      throw new ForbiddenException('No tienes permiso para ver tickets');
     }
 
-    return tickets;
+    async getLatestTickets(): Promise<Ticket[]> {
+        try {
+            const tickets = await this.ticketRepository.createQueryBuilder('ticket')
+                .orderBy('ticket.fecha', 'DESC')
+                .limit(10)
+                .getMany();
+            return tickets;
+        } catch (error) {
+            console.error('Error fetching latest tickets:', error);
+            throw new InternalServerErrorException('Error fetching tickets');
+        }
+    }
 
-  } catch (error) {
-    console.error('Error fetching tickets by role:', error);
-    throw new InternalServerErrorException('Error fetching tickets by role');
-  }
-}
+    private hasRole(user: User, roleName: string): boolean {
+        // 1. Validación de seguridad: si no hay roles, retorna falso
+        if (!user || !user.roles || !Array.isArray(user.roles)) {
+            console.warn('⚠️ Usuario sin roles o estructura incorrecta:', user);
+            return false;
+        }
 
+        // 2. Buscamos en el arreglo de objetos RolUser
+        // user.roles = [{ id: 1, nombre: 'admin' }, { id: 2, nombre: 'user' }]
+        return user.roles.some((rol: any) => rol.nombre === roleName);
+    }
 
+    private async generateCodigoIncidencia(tipoIncidencia: string): Promise<string> {
+        let prefix = '';
+        if (tipoIncidencia === 'Informatica') prefix = 'INFO';
+        else if (tipoIncidencia === 'Mantencion') prefix = 'MANT';
 
-// Lógica para generar el código de incidencia
-private async generateCodigoIncidencia(tipoIncidencia: string): Promise<string> {
-  let prefix = '';
-
-  // Definir el prefijo basado en el tipo de incidencia
-  if (tipoIncidencia === 'Informatica') {
-    prefix = 'INFO';
-  } else if (tipoIncidencia === 'Mantencion') {
-    prefix = 'MANT';
-  }
-
-  // Contar los tickets existentes de ese tipo
-  const count = await this.ticketRepository.count({
-    where: { tipoIncidencia },
-  });
-
-  // Incrementar el número de ticket para ese tipo
-  const increment = count + 1;
-
-  // Formatear el código con ceros a la izquierda, por ejemplo: INF-01
-  return `${prefix}-${increment.toString().padStart(4, '000')}`;
-}
-
+        const count = await this.ticketRepository.count({ where: { tipoIncidencia } });
+        const increment = count + 1;
+        return `${prefix}-${increment.toString().padStart(4, '000')}`;
+    }
 }

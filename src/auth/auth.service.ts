@@ -101,6 +101,8 @@ export class AuthService {
 
         const { email, password } = loginDto;
 
+        // 🔍 LOG DE DEPURACIÓN
+
         const user = await this.userRepository.findOne({ where: { email: email } });
         if ( !user ) {
             throw new UnauthorizedException('Credenciales de acceso invalidas -email');
@@ -124,22 +126,26 @@ export class AuthService {
         return this.userRepository.find()
     }
 
-  async findUserById ( id: number ): Promise<User> {
-      const user = await this.userRepository.findOne({ 
-          where: { id },
-          // ✅ Asegurar que la relación 'roles' se cargue para el JWT.
-          // Si tienes { eager: true } en la entidad User, esto es opcional.
-          relations: ['roles'] 
-      }); 
+    async findUserById ( id: number ): Promise<User> {
+        
+        // 🛑 BLINDAJE DE SEGURIDAD 🛑
+        // Si el ID es null, undefined o 0, lanzamos error y NO consultamos la BD.
+        if (!id) {
+            console.error('CRITICAL: Se intentó buscar un usuario con ID nulo o indefinido.');
+            throw new UnauthorizedException('ID de usuario inválido');
+        }
 
-      if (!user) {
-          throw new UnauthorizedException(`Usuario con ID ${id} no encontrado`);
-      }
+        const user = await this.userRepository.findOne({ 
+            where: { id },
+            relations: ['roles'] 
+        }); 
 
-      // Retorna el objeto User completo
-      return user;
-  }
-    
+        if (!user) {
+            throw new UnauthorizedException(`Usuario con ID ${id} no encontrado`);
+        }
+
+        return user;
+    }  
 
 
     async findOne(id: number): Promise<User> {
