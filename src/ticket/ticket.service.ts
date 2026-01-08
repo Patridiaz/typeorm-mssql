@@ -1,4 +1,5 @@
 import { ForbiddenException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { MailService } from 'src/auth/mail.service';
 import { Ticket } from './entity/ticket.entity';
 import { Brackets, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -22,7 +23,8 @@ export class TicketService {
         @InjectRepository(Establecimiento)
         private readonly establecimientoRepository: Repository<Establecimiento>,
         @InjectRepository(FileEntity)
-        private readonly fileRepository: Repository<FileEntity>
+        private readonly fileRepository: Repository<FileEntity>,
+        private readonly mailService: MailService
     ) { }
 
     // =================================================================
@@ -97,7 +99,20 @@ export class TicketService {
         });
 
         try {
-            return await this.ticketRepository.save(ticket);
+            const savedTicket = await this.ticketRepository.save(ticket);
+            
+            // Recargar para tener relaciones completas
+            const fullTicket = await this.fetchTicketById(savedTicket.id);
+
+            // Notificar al creador
+            await this.mailService.sendTicketCreationEmail(fullTicket.email, fullTicket);
+
+            // Notificar al técnico si está asignado
+            if (fullTicket.assignedTo) {
+                await this.mailService.sendTicketAssignedEmail(fullTicket.assignedTo.email, fullTicket);
+            }
+
+            return savedTicket;
         } catch (error) {
             console.error('Error al guardar el ticket:', error);
             throw new InternalServerErrorException('Error al guardar el ticket');
@@ -228,6 +243,8 @@ async findTickets(user: User): Promise<Ticket[]> {
         if (updateTicketDto.email) ticket.email = updateTicketDto.email;
         if (updateTicketDto.incidencia) ticket.incidencia = updateTicketDto.incidencia;
         if (updateTicketDto.fecha) ticket.fecha = updateTicketDto.fecha;
+        if (updateTicketDto.validacion_solicitante) ticket.validacion_solicitante = updateTicketDto.validacion_solicitante;
+        if (updateTicketDto.puntuacion) ticket.puntuacion = updateTicketDto.puntuacion;
 
         ticket.codigoIncidencia = codigoIncidenciaOriginal;
 
@@ -243,7 +260,7 @@ async findTickets(user: User): Promise<Ticket[]> {
                 await this.fileRepository.delete(ticket.file?.id);
             }
 
-            await writeFile(filePath, file.buffer as Buffer);
+            await writeFile(filePath, file.buffer as any);
 
             const newFile = this.fileRepository.create({
                 filename: newFileName,
@@ -257,6 +274,14 @@ async findTickets(user: User): Promise<Ticket[]> {
         }
 
         await this.ticketRepository.save(ticket);
+
+        // Notificar cambios
+        const fullTicket = await this.fetchTicketById(id);
+        await this.mailService.sendTicketUpdateEmail(fullTicket.email, fullTicket);
+        if (fullTicket.assignedTo) {
+            await this.mailService.sendTicketUpdateEmail(fullTicket.assignedTo.email, fullTicket);
+        }
+
         return ticket;
     }
 

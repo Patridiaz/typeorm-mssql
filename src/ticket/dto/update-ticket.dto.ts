@@ -48,4 +48,12 @@ export class UpdateTicketDto {
   @Type(() => Date)
   @IsDate()
   fecha?: Date;
+
+  @IsOptional()
+  @IsString()
+  validacion_solicitante?: string;
+
+  @IsOptional()
+  @IsInt()
+  puntuacion?: number;
 }

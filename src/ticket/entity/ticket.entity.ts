@@ -34,6 +34,12 @@ export class Ticket {
     @Column({ type: 'nvarchar', nullable: false })
     estado: string;
 
+    @Column({ type: 'nvarchar', nullable: true, length: 500 })
+    validacion_solicitante?: string;
+
+    @Column({ type: 'int', nullable: true })
+    puntuacion?: number;
+
     @ManyToOne(() => Establecimiento, { eager: true })
     establecimiento: Establecimiento; // Asegúrate de que esté definido
 

@@ -152,12 +152,33 @@ export class TicketController {
         const userRoleNames = user.roles ? user.roles.map((rol: any) => rol.nombre) : [];
         const hasPermission = userRoleNames.some(roleName => allowedRoles.includes(roleName));
 
-        if (!hasPermission) {
+        const ticket = await this.ticketService.fetchTicketById(id);
+        if (!ticket) throw new NotFoundException('Ticket no encontrado');
+
+        const isOwner = user.id === ticket.createdBy?.id;
+
+        // Si no tiene rol permitido Y no es el dueño, rechazar
+        if (!hasPermission && !isOwner) {
             throw new ForbiddenException('No tienes permiso para actualizar el ticket');
         }
 
-        const ticket = await this.ticketService.fetchTicketById(id);
-        if (!ticket) throw new NotFoundException('Ticket no encontrado');
+        // Si es el dueño pero NO tiene rol permitido, SOLO puede actualizar la validación, puntuación y reapertura
+        if (isOwner && !hasPermission) {
+            const restrictedDto: UpdateTicketDto = {
+                validacion_solicitante: updateTicketDto.validacion_solicitante,
+                puntuacion: updateTicketDto.puntuacion,
+                estado: updateTicketDto.estado // Permitir cambio de estado para reapertura
+            };
+
+            const updatedTicket = await this.ticketService.updateTicket(id, restrictedDto, file);
+
+            // Si el estado cambió a 'Asignado' (reapertura), notificar al técnico
+            if (updateTicketDto.estado === 'Asignado' && ticket.assignedTo) {
+                await this.mailService.sendTicketReopenedEmail(ticket.assignedTo.email, updatedTicket);
+            }
+
+            return { message: 'Feedback enviado correctamente', id };
+        }
 
         const isTecnico = userRoleNames.includes('tecnico_informatica') || userRoleNames.includes('admin_mantencion');
         const isAdmin = userRoleNames.includes('admin');

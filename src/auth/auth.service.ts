@@ -259,8 +259,9 @@ async updateUser(id: number, updateUserDto: UpdateUserDto): Promise<User> {
       });
 
       // Enviar correo electrónico
-      const resetUrl = `${this.BaseUrl}/auth/reset-password?token=${resetToken}`;
-      // console.log('Generated reset URL:', resetUrl);
+      const resetUrl = `${this.BaseUrl}/#/auth/reset-password?token=${resetToken}`;
+      console.log('--- DEBUG: URL de recuperación generada ---');
+      console.log(resetUrl);
       await this.mailService.sendPasswordResetEmail(user.email, resetUrl);
   }
 
