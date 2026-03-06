@@ -127,12 +127,18 @@ export class TicketService {
      * Método principal para buscar tickets según el rol del usuario.
      * Reemplaza la lógica antigua de findTicketsByRole para evitar duplicidad.
      */
-async findTickets(user: User): Promise<Ticket[]> {
+async findTickets(user: User, year?: string): Promise<Ticket[]> {
         const query = this.ticketRepository.createQueryBuilder('ticket')
             .leftJoinAndSelect('ticket.assignedTo', 'assignedTo')
             .leftJoinAndSelect('ticket.createdBy', 'createdBy')
             .leftJoinAndSelect('ticket.establecimiento', 'establecimiento')
             .orderBy('ticket.fecha', 'DESC'); // Ordenar por fecha
+
+        if (year) {
+            const startOfYear = new Date(parseInt(year, 10), 0, 1);
+            const endOfYear = new Date(parseInt(year, 10), 11, 31, 23, 59, 59, 999);
+            query.andWhere('ticket.fecha >= :startOfYear AND ticket.fecha <= :endOfYear', { startOfYear, endOfYear });
+        }
 
         // 🔍 DEBUG: Ver qué roles está detectando el backend
         console.log(`Usuario: ${user.email}, Roles detectados:`, user.roles);
@@ -178,8 +184,8 @@ async findTickets(user: User): Promise<Ticket[]> {
 
     // Mantenemos este método por compatibilidad si lo usas en otro lado,
     // pero ahora simplemente delega al método principal corregido.
-    async findTicketsByRole(user: User): Promise<Ticket[]> {
-        return this.findTickets(user);
+    async findTicketsByRole(user: User, year?: string): Promise<Ticket[]> {
+        return this.findTickets(user, year);
     }
 
     // --- Métodos Auxiliares de Fetch ---
@@ -330,20 +336,36 @@ async findTickets(user: User): Promise<Ticket[]> {
         return { message: 'Ticket fue eliminado con exito.!' }
     }
 
-    async countTicketsByType(tipoIncidencia: string): Promise<number> {
+    async countTicketsByType(tipoIncidencia: string, year?: string): Promise<number> {
         try {
-            return await this.ticketRepository.count({ where: { tipoIncidencia } });
+            if (year) {
+                const startOfYear = new Date(parseInt(year, 10), 0, 1);
+                const endOfYear = new Date(parseInt(year, 10), 11, 31, 23, 59, 59, 999);
+                return await this.ticketRepository.createQueryBuilder('ticket')
+                    .where('ticket.tipoIncidencia = :tipoIncidencia', { tipoIncidencia })
+                    .andWhere('ticket.fecha >= :startOfYear AND ticket.fecha <= :endOfYear', { startOfYear, endOfYear })
+                    .getCount();
+            } else {
+                return await this.ticketRepository.count({ where: { tipoIncidencia } });
+            }
         } catch (error) {
             throw new InternalServerErrorException('Error al contar tickets por tipo');
         }
     }
 
-    async getLatestTickets(): Promise<Ticket[]> {
+    async getLatestTickets(year?: string): Promise<Ticket[]> {
         try {
-            const tickets = await this.ticketRepository.createQueryBuilder('ticket')
+            const query = this.ticketRepository.createQueryBuilder('ticket')
                 .orderBy('ticket.fecha', 'DESC')
-                .limit(10)
-                .getMany();
+                .limit(10);
+                
+            if (year) {
+                const startOfYear = new Date(parseInt(year, 10), 0, 1);
+                const endOfYear = new Date(parseInt(year, 10), 11, 31, 23, 59, 59, 999);
+                query.andWhere('ticket.fecha >= :startOfYear AND ticket.fecha <= :endOfYear', { startOfYear, endOfYear });
+            }
+            
+            const tickets = await query.getMany();
             return tickets;
         } catch (error) {
             console.error('Error fetching latest tickets:', error);

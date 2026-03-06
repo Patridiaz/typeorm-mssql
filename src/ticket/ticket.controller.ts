@@ -2,7 +2,7 @@ import { Body, Controller, Delete, ForbiddenException, Get, HttpStatus, Internal
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { Ticket } from './entity/ticket.entity';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
-import { Request } from 'express';
+import { User } from 'src/auth/entity/user.entity';
 import { AuthGuard } from 'src/auth/guards/auth.guard';
 import { MailService } from 'src/auth/mail.service';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -28,10 +28,10 @@ export class TicketController {
      * reside completamente en el servicio findTickets.
      */
     @Get()
-    async getTickets(@Req() req: Request): Promise<Ticket[]> {
+    async getTickets(@Req() req: Request, @Query('year') year?: string): Promise<Ticket[]> {
         const user = req['user'];
         if (!user) throw new ForbiddenException('Usuario no identificado');
-        return this.ticketService.findTickets(user);
+        return this.ticketService.findTickets(user as User, year);
     }
 
     /**
@@ -39,9 +39,9 @@ export class TicketController {
      * pero ahora reutiliza la lógica segura de findTickets.
      */
     @Get('/role')
-    async getTicketsByRole(@Req() req: Request): Promise<Ticket[]> {
+    async getTicketsByRole(@Req() req: Request, @Query('year') year?: string): Promise<Ticket[]> {
         const user = req['user'];
-        const tickets = await this.ticketService.findTickets(user); // Usamos el método corregido
+        const tickets = await this.ticketService.findTickets(user as User, year); // Usamos el método corregido
 
         if (tickets.length === 0) {
             // Opcional: devolver array vacío en vez de error 404 suele ser mejor práctica en listas
@@ -53,9 +53,9 @@ export class TicketController {
     }
 
     @Get('/latest')
-    async getLatestTickets(): Promise<Ticket[]> {
+    async getLatestTickets(@Query('year') year?: string): Promise<Ticket[]> {
         try {
-            return await this.ticketService.getLatestTickets();
+            return await this.ticketService.getLatestTickets(year);
         } catch (error) {
             console.error('Error fetching latest tickets:', error);
             throw new InternalServerErrorException('Error fetching latest tickets');
@@ -63,9 +63,9 @@ export class TicketController {
     }
 
     @Get('/count')
-    async countTicketsByType(@Query('tipoIncidencia') tipoIncidencia: string): Promise<number> {
+    async countTicketsByType(@Query('tipoIncidencia') tipoIncidencia: string, @Query('year') year?: string): Promise<number> {
         try {
-            return await this.ticketService.countTicketsByType(tipoIncidencia);
+            return await this.ticketService.countTicketsByType(tipoIncidencia, year);
         } catch (error) {
             throw new InternalServerErrorException('Error al obtener el conteo de tickets');
         }
