@@ -1,0 +1,30 @@
+# Configuración del servidor Caddy
+api.ticket.eduhuechuraba.cl {
+    # Redirigir todas las peticiones al puerto interno expuesto por el contenedor del backend
+    reverse_proxy backend:4100
+
+    # Configuración de compresión Gzip/zstd para mejorar rendimiento
+    encode gzip zstd
+
+    # Cabeceras de seguridad recomendadas
+    header {
+        # Prevenir que la web sea embebida en iframes externos
+        X-Frame-Options "SAMEORIGIN"
+        # Prevenir sniffing de tipo MIME
+        X-Content-Type-Options "nosniff"
+        # Habilitar filtro XSS en navegadores antiguos
+        X-XSS-Protection "1; mode=block"
+        # Limitar la información del referer enviada
+        Referrer-Policy "no-referrer-when-downgrade"
+        # Habilitar HSTS (HTTP Strict Transport Security)
+        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+    }
+
+    # Habilitar registro de accesos en archivo
+    log {
+        output file /var/log/caddy/access.log {
+            roll_size 10mb
+            roll_keep 5
+        }
+    }
+}

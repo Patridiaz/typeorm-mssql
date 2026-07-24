@@ -1,0 +1,50 @@
+version: '3.8'
+
+services:
+  # Servicio de Backend (NestJS + TypeORM)
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: typeorm-mssql-backend
+    restart: unless-stopped
+    # Leer variables de entorno desde el archivo .env local
+    env_file:
+      - .env
+    # Mapeo de puertos (4100 del contenedor expuesto al puerto 4100 del host)
+    ports:
+      - "4100:4100"
+    # Volumen persistente para almacenar las cargas estáticas de los usuarios
+    volumes:
+      - ./uploads:/app/uploads
+    networks:
+      - app-network
+
+  # Servicio de Caddy (Proxy Inverso con SSL Automático)
+  caddy:
+    image: caddy:latest
+    container_name: caddy-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp" # Soporte para HTTP/3 (QUIC)
+    # Montar configuración de Caddy y persistir certificados SSL
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+# Redes de Docker para comunicación interna segura
+networks:
+  app-network:
+    driver: bridge
+
+# Volúmenes con nombres para persistir certificados de Let's Encrypt generados por Caddy
+volumes:
+  caddy_data:
+  caddy_config:
