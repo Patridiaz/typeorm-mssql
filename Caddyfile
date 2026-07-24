@@ -1,5 +1,13 @@
 # Configuración del servidor Caddy
 api.ticket.eduhuechuraba.cl {
+    # --------------------------------------------------------------------------
+    # NOTA PARA PRUEBAS EN LOCAL:
+    # Si estás ejecutando esto localmente (fuera del servidor de producción), 
+    # Let's Encrypt no podrá validar tu dominio y la red podría dar error.
+    # Descomenta la línea de abajo para usar certificados autofirmados locales:
+    # tls internal
+    # --------------------------------------------------------------------------
+
     # Redirigir todas las peticiones al puerto interno expuesto por el contenedor del backend
     reverse_proxy backend:4100
 

@@ -34,6 +34,10 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile
       - caddy_data:/data
       - caddy_config:/config
+    # Si tienes problemas de DNS en Windows (network unreachable), puedes descomentar esto:
+    # dns:
+    #   - 8.8.8.8
+    #   - 1.1.1.1
     networks:
       - app-network
     depends_on:
